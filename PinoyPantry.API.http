@@ -1,0 +1,6 @@
+@PinoyPantry.API_HostAddress = http://localhost:5034
+
+GET {{PinoyPantry.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
