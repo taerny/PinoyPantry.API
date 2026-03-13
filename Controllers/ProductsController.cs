@@ -1,8 +1,6 @@
-﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ActionConstraints;
-using PinoyPantry.API.Models;
-using PinoyPantry.API.Repositories;
+using PinoyPantry.API.DTOs;
+using PinoyPantry.API.Services;
 
 namespace PinoyPantry.API.Controllers
 {
@@ -10,24 +8,26 @@ namespace PinoyPantry.API.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
+        private readonly IProductService _productService;
 
-        private readonly IProductRepository _productRepository;
-        public ProductsController(IProductRepository productRepository)
+        public ProductsController(IProductService productService)
         {
-            _productRepository = productRepository;
+            _productService = productService;
         }
 
-        //Get: api/products
+        // GET: api/products?page=1&limit=12&category=snacks&search=vinegar
         [HttpGet]
-        public  async Task<ActionResult> GetAllProducts()
+        public async Task<ActionResult<PagedResult<ProductResponseDto>>> GetAllProducts([FromQuery] ProductQueryParams query)
         {
-            var products = await _productRepository.GetAllProductsAsync();
-            return Ok(products);
+            var result = await _productService.GetAllProductsAsync(query);
+            return Ok(result);
         }
 
+        // GET: api/products/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Product>> GetProduct(int id) {
-            var product = await _productRepository.GetProductyByIdAsync(id);
+        public async Task<ActionResult<ProductResponseDto>> GetProduct(int id)
+        {
+            var product = await _productService.GetProductByIdAsync(id);
             if (product == null)
                 return NotFound(new { message = $"Product {id} not found." });
 
@@ -36,34 +36,32 @@ namespace PinoyPantry.API.Controllers
 
         // POST: api/products
         [HttpPost]
-        public async Task<ActionResult<Product>> CreateProduct(Product product) {
-
-            var createdProduct = await _productRepository.CreateProductAsync(product);
+        public async Task<ActionResult<ProductResponseDto>> CreateProduct(CreateProductDto productDto)
+        {
+            var createdProduct = await _productService.CreateProductAsync(productDto);
             return CreatedAtAction(nameof(GetProduct), new { id = createdProduct.Id }, createdProduct);
-
         }
 
+        // PUT: api/products/5
         [HttpPut("{id}")]
-        public async Task<ActionResult<Product>> UpdateProduct(int id, Product product) {
-
-            var updatedProduct = await _productRepository.UpdateProductAsync(id, product);
+        public async Task<ActionResult<ProductResponseDto>> UpdateProduct(int id, UpdateProductDto productDto)
+        {
+            var updatedProduct = await _productService.UpdateProductAsync(id, productDto);
             if (updatedProduct == null)
-                return NotFound(new { message = $" Product with ID: {id} not found." });
+                return NotFound(new { message = $"Product with ID {id} not found." });
 
             return Ok(updatedProduct);
-
         }
-        
-        [HttpDelete("{id}")]
-        public async Task<ActionResult<Product>> DeleteProduct(int id) {
 
-            var result = await _productRepository.DeleteProductAsync(id);
+        // DELETE: api/products/5
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteProduct(int id)
+        {
+            var result = await _productService.DeleteProductAsync(id);
             if (!result)
                 return NotFound(new { message = $"Product with ID {id} not found." });
 
             return NoContent();
-
         }
-
     }
 }

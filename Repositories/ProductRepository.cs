@@ -1,12 +1,12 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using PinoyPantry.API.Data;
+using PinoyPantry.API.DTOs;
 using PinoyPantry.API.Models;
 
 namespace PinoyPantry.API.Repositories
 {
     public class ProductRepository : IProductRepository
     {
-
         private readonly ApplicationDBContext _context;
 
         public ProductRepository(ApplicationDBContext context)
@@ -14,14 +14,30 @@ namespace PinoyPantry.API.Repositories
             _context = context;
         }
 
-        public async Task<IEnumerable<Product>> GetAllProductsAsync()
+        public async Task<(IEnumerable<Product> Products, int TotalCount)> GetAllProductsAsync(ProductQueryParams query)
         {
-            return await _context.Products.ToListAsync();
+            var products = _context.Products.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(query.Category))
+                products = products.Where(p => p.Category == query.Category);
+
+            if (!string.IsNullOrWhiteSpace(query.Search))
+                products = products.Where(p => p.Name.Contains(query.Search) || p.Description.Contains(query.Search));
+
+            var totalCount = await products.CountAsync();
+
+            var paged = await products
+                .OrderBy(p => p.Id)
+                .Skip((query.Page - 1) * query.Limit)
+                .Take(query.Limit)
+                .ToListAsync();
+
+            return (paged, totalCount);
         }
 
-        public async Task<Product?> GetProductyByIdAsync(int id)
+        public async Task<Product?> GetProductByIdAsync(int id)
         {
-            return  await _context.Products.FindAsync(id);
+            return await _context.Products.FindAsync(id);
         }
 
         public async Task<Product> CreateProductAsync(Product product)
@@ -39,23 +55,24 @@ namespace PinoyPantry.API.Repositories
 
             _context.Products.Remove(product);
             await _context.SaveChangesAsync();
-            return true;        
+            return true;
         }
 
         public async Task<Product?> UpdateProductAsync(int id, Product product)
         {
-            var existingProduct =  await _context.Products.FindAsync(id);
-            if (existingProduct == null)
-                return null;    
-            existingProduct.Name = product.Name;    
-            existingProduct.Description = product.Description;
-            existingProduct.Price = product.Price;
-            existingProduct.ImageUrll = product.ImageUrll;  
-            existingProduct.Category = product.Category;    
-            existingProduct.StockQuantity = product.StockQuantity;
+            var existing = await _context.Products.FindAsync(id);
+            if (existing == null)
+                return null;
 
-            await _context.SaveChangesAsync(); 
-            return existingProduct;
+            existing.Name = product.Name;
+            existing.Description = product.Description;
+            existing.Price = product.Price;
+            existing.ImageUrl = product.ImageUrl;
+            existing.Category = product.Category;
+            existing.StockQuantity = product.StockQuantity;
+
+            await _context.SaveChangesAsync();
+            return existing;
         }
     }
 }
