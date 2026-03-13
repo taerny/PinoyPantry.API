@@ -1,59 +1,73 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PinoyPantry API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A .NET 8 Web API backend for the PinoyPantry online store — an authentic Filipino grocery e-commerce platform.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **.NET 8** — Web API
+- **Entity Framework Core** — ORM
+- **SQL Server Express** — Database
+- **AutoMapper** — DTO mapping
+- **FluentValidation** — Request validation
+- **Swagger / Swashbuckle** — API documentation
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Architecture
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```
+Controllers → Services → Repositories → EF Core → SQL Server
+```
 
-## Learning Laravel
+- **Controllers** — HTTP endpoints, accepts/returns DTOs
+- **Services** — Business logic layer
+- **Repositories** — Data access layer
+- **DTOs** — Separate request/response models from database models
+- **Middleware** — Global exception handling
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Endpoints
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/api/products` | Get all products (paginated, filterable) |
+| GET | `/api/products/{id}` | Get product by ID |
+| POST | `/api/products` | Create a product |
+| PUT | `/api/products/{id}` | Update a product |
+| DELETE | `/api/products/{id}` | Delete a product |
 
-## Laravel Sponsors
+### Query Parameters (GET /api/products)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+| Param | Type | Example |
+|-------|------|---------|
+| page | int | `?page=1` |
+| limit | int | `?limit=12` |
+| category | string | `?category=Condiments` |
+| search | string | `?search=soy sauce` |
 
-### Premium Partners
+## Getting Started
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Prerequisites
 
-## Contributing
+- .NET 8 SDK
+- SQL Server Express (2012 or later)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Setup
 
-## Code of Conduct
+1. Clone the repo
+2. Update the connection string in `appsettings.json`:
+   ```json
+   "ConnectionStrings": {
+     "DefaultConnection": "Server=localhost\\SQLEXPRESS;Database=PinoyPantryDb;Trusted_Connection=True;TrustServerCertificate=True;"
+   }
+   ```
+3. Run migrations:
+   ```
+   dotnet ef database update
+   ```
+4. Run the API:
+   ```
+   dotnet run
+   ```
+5. Open Swagger UI at `https://localhost:7136/swagger`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Related
 
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+- Frontend: [PinoyPantry.Client](https://github.com/taerny/PinoyPantry.Client) — React + Vite + TypeScript
