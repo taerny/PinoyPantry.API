@@ -1032,21 +1032,247 @@ If you've used other frameworks, here's how the concepts map:
 
 ---
 
+## Part 11 — The Service Layer Refactor (Senior Approach)
+
+### Why We Refactored
+
+The first version had all the auth logic (JWT generation, password checking,
+user creation) directly inside `AuthController.cs`. This works, but it's messy:
+
+- Controllers should only handle HTTP (read request, return response)
+- Business logic should be in a separate Service class
+- This is the same pattern we use for Products: `ProductsController` → `ProductService`
+
+### The Clean Architecture
+
+```
+AuthController.cs          ← Thin controller: handles HTTP, calls service
+    ↓
+IAuthService.cs            ← Interface (contract)
+AuthService.cs             ← Business logic: JWT generation, login, register
+    ↓
+UserManager<ApplicationUser>  ← ASP.NET Identity (database operations)
+```
+
+Compare with Products:
+
+```
+ProductsController.cs      ← Thin controller: handles HTTP, calls service
+    ↓
+IProductService.cs         ← Interface (contract)
+ProductService.cs          ← Business logic
+    ↓
+IProductRepository.cs      ← Interface (contract)
+ProductRepository.cs       ← Database operations (EF Core)
+```
+
+Same pattern. Every feature follows: Controller → Service → Data.
+
+### IAuthService.cs (The Contract)
+
+```csharp
+public interface IAuthService
+{
+    Task<AuthResponseDto> RegisterAsync(RegisterDto dto);
+    Task<AuthResponseDto> LoginAsync(LoginDto dto);
+    Task<UserProfileDto?> GetProfileAsync(string userId);
+}
+```
+
+Three methods. The controller calls these. It doesn't know or care how
+they work internally.
+
+### AuthService.cs (The Implementation)
+
+This class contains ALL the auth business logic:
+- Creating users with `UserManager`
+- Verifying passwords with `SignInManager`
+- Generating JWT tokens
+- Looking up user profiles
+
+The controller is now just ~50 lines instead of ~130 lines. It only does:
+1. Validate input
+2. Call the service
+3. Return the appropriate HTTP status code
+
+### AuthController.cs (Slim Version)
+
+```csharp
+[HttpPost("login")]
+public async Task<IActionResult> Login(LoginDto dto)
+{
+    try
+    {
+        var result = await _authService.LoginAsync(dto);
+        return Ok(result);
+    }
+    catch (UnauthorizedAccessException ex)
+    {
+        return Unauthorized(new { message = ex.Message });
+    }
+}
+```
+
+Notice: no JWT logic, no UserManager, no password checking. The controller
+just calls `_authService.LoginAsync()` and handles the result. Clean.
+
+### DataSeeder.cs (Extracted from Program.cs)
+
+The seed code that creates roles and the admin account was moved from
+`Program.cs` to its own class: `Data/DataSeeder.cs`.
+
+Program.cs now has just one line for seeding:
+
+```csharp
+using (var scope = app.Services.CreateScope())
+{
+    await DataSeeder.SeedRolesAndAdmin(scope.ServiceProvider);
+}
+```
+
+This keeps Program.cs focused on configuration and middleware, not data seeding.
+
+### Registration in Program.cs
+
+```csharp
+builder.Services.AddScoped<IAuthService, AuthService>();
+```
+
+One line. Same as products. DI handles the rest.
+
+---
+
+## Part 12 — React Hooks Rule (Bug We Fixed)
+
+### The Problem
+
+When we first added auth checking to `AdminUploadPage.tsx`, we had this
+structure:
+
+```typescript
+export function AdminUploadPage() {
+    const { user, isAdmin } = useAuth();        // ← Hook 1
+    const [products, setProducts] = useState();  // ← Hook 2
+
+    if (!user || !isAdmin) {                     // ← Early return
+        return <div>Access Denied</div>;
+    }
+
+    useEffect(() => {                            // ← Hook 3 (AFTER return!)
+        fetchProducts();
+    }, []);
+```
+
+This breaks React's "Rules of Hooks":
+- Hooks must ALWAYS run in the same order on every render
+- You can't put hooks after conditional returns
+- React tracks hooks by their position in the call sequence
+
+On the first render, `user` is null (auth is still loading from localStorage),
+so the function returns early. `useEffect` never runs. On the second render,
+`user` is loaded, so the function passes the check and hits `useEffect`.
+But React sees: "First render had 2 hooks, second render has 3 hooks" → crash.
+
+### The Fix
+
+Move ALL hooks to the top, before any conditional returns:
+
+```typescript
+export function AdminUploadPage() {
+    const { user, isAdmin, loading: authLoading } = useAuth();  // Hook 1
+    const [products, setProducts] = useState();                   // Hook 2
+    const [loading, setLoading] = useState(true);                 // Hook 3
+
+    useEffect(() => {                                             // Hook 4
+        if (!authLoading && user && isAdmin) {
+            fetchProducts();
+        }
+    }, [authLoading, user, isAdmin]);
+
+    // NOW safe to do conditional returns
+    if (authLoading) return <div>Loading...</div>;
+    if (!user || !isAdmin) return <div>Access Denied</div>;
+```
+
+All 4 hooks run on EVERY render, in the same order. The conditional logic
+is INSIDE the useEffect, not wrapping it. This is the correct React pattern.
+
+---
+
+## Part 13 — Full Project Architecture (Final State)
+
+```
+PinoyPantry.API/
+├── Controllers/
+│   ├── AuthController.cs         ← Login, Register, Me (thin)
+│   ├── ProductsController.cs     ← Product CRUD (thin)
+│   └── ImageController.cs        ← Image upload (thin)
+├── Services/
+│   ├── IAuthService.cs           ← Auth contract
+│   ├── AuthService.cs            ← JWT + Identity logic
+│   ├── IProductService.cs        ← Product contract
+│   ├── ProductService.cs         ← Product business logic
+│   ├── IBlobStorageService.cs    ← Blob storage contract
+│   └── BlobStorageService.cs     ← Azure Blob upload/delete
+├── Repositories/
+│   ├── IProductRepository.cs     ← Data access contract
+│   └── ProductRepository.cs      ← EF Core queries
+├── Models/
+│   ├── Product.cs                ← Product entity
+│   └── ApplicationUser.cs        ← User entity (extends IdentityUser)
+├── DTOs/
+│   ├── ProductDtos.cs            ← Product request/response shapes
+│   ├── AuthDtos.cs               ← Auth request/response shapes
+│   └── UserProfileDto.cs         ← Profile response shape
+├── Data/
+│   ├── ApplicationDBContext.cs   ← Database context (IdentityDbContext)
+│   └── DataSeeder.cs             ← Seeds roles + admin account
+├── Middleware/
+│   └── ExceptionHandlingMiddleware.cs  ← Global error handling
+├── Validators/
+│   ├── CreateProductDtoValidator.cs    ← FluentValidation rules
+│   └── UpdateProductDtoValidator.cs    ← FluentValidation rules
+├── Migrations/                   ← EF Core migration files
+└── Program.cs                    ← DI registration + middleware pipeline
+
+PinoyPantry.Client/
+├── src/
+│   ├── contexts/
+│   │   ├── AuthContext.tsx        ← JWT token state + login/logout
+│   │   └── CartContext.tsx        ← Shopping cart state
+│   ├── pages/
+│   │   ├── LoginPage.tsx          ← Login + Register UI
+│   │   ├── AdminUploadPage.tsx    ← Protected image upload
+│   │   ├── HomePage.tsx           ← Product listing
+│   │   ├── CategoryPage.tsx       ← Filtered products
+│   │   └── ...
+│   ├── services/
+│   │   ├── apiProductService.ts   ← Fetches from .NET API
+│   │   └── productService.ts      ← Data source selector
+│   └── App.tsx                    ← Routes + providers
+└── .env                           ← API URL configuration
+```
+
+---
+
 ## Summary
 
 | Component                   | What It Does                                        |
 |-----------------------------|-----------------------------------------------------|
 | `ApplicationUser.cs`        | User model with custom fields (extends IdentityUser)|
-| `AuthController.cs`         | Login, Register, Me endpoints                        |
+| `IAuthService.cs`           | Auth service contract (interface)                    |
+| `AuthService.cs`            | JWT generation, login, register logic                |
+| `AuthController.cs`         | Thin HTTP layer — calls AuthService                  |
+| `DataSeeder.cs`             | Seeds roles + admin account on startup               |
 | `AuthDtos.cs`               | Request/response shapes for auth endpoints           |
+| `UserProfileDto.cs`         | Shape for user profile responses                     |
 | `IdentityDbContext`         | Adds Identity tables to our database                 |
 | `Program.cs` (Identity)     | Configures user management + password rules          |
 | `Program.cs` (JWT)          | Configures token validation                          |
-| `Program.cs` (Seed)         | Creates Admin role + default admin account            |
 | `[Authorize]`               | Protects endpoints — requires valid token            |
 | `[Authorize(Roles="Admin")]`| Requires Admin role specifically                     |
 | `AuthContext.tsx`            | React state for current user + token                 |
 | `LoginPage.tsx`             | Login/register UI that calls the API                 |
-| `AdminUploadPage.tsx`       | Shows "Access Denied" if not admin                   |
+| `AdminUploadPage.tsx`       | Protected page — checks auth before rendering        |
 | `localStorage`              | Persists the JWT token across browser sessions       |
 | `Authorization: Bearer`     | HTTP header that sends the token with each request   |
