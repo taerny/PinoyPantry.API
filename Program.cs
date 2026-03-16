@@ -45,10 +45,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins(
-                  "http://localhost:3000",
-                  "http://localhost:3001",
-                  "https://gentle-dune-0c69a8700.6.azurestaticapps.net")
+        policy.SetIsOriginAllowed(origin =>
+              {
+                  if (new Uri(origin).Host == "localhost") return true;
+                  return origin == "https://gentle-dune-0c69a8700.6.azurestaticapps.net";
+              })
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
