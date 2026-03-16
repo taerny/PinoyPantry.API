@@ -8,4 +8,5 @@ public class UserProfileDto
     public string Address { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public DateTime? LastLoginAt { get; set; }
 }

@@ -63,4 +63,32 @@ public class AuthController : ControllerBase
 
         return Ok(profile);
     }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.CurrentPassword) || string.IsNullOrWhiteSpace(dto.NewPassword))
+            return BadRequest(new { message = "Current and new passwords are required." });
+
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        try
+        {
+            await _authService.ChangePasswordAsync(userId!, dto);
+            return Ok(new { message = "Password changed successfully." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("dashboard-stats")]
+    public async Task<IActionResult> GetDashboardStats()
+    {
+        var stats = await _authService.GetDashboardStatsAsync();
+        return Ok(stats);
+    }
 }
