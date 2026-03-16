@@ -30,6 +30,9 @@ builder.Services.AddDbContext<ApplicationDBContext>(options =>
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
 
+// Azure Blob Storage
+builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
+
 // AutoMapper
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 

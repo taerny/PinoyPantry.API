@@ -74,5 +74,15 @@ namespace PinoyPantry.API.Repositories
             await _context.SaveChangesAsync();
             return existing;
         }
+
+        public async Task UpdateImageUrlAsync(int id, string imageUrl)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product != null)
+            {
+                product.ImageUrl = imageUrl;
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 }

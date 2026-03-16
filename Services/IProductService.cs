@@ -9,5 +9,7 @@ namespace PinoyPantry.API.Services
         Task<ProductResponseDto> CreateProductAsync(CreateProductDto productDto);
         Task<ProductResponseDto?> UpdateProductAsync(int id, UpdateProductDto productDto);
         Task<bool> DeleteProductAsync(int id);
+        Task<ProductResponseDto?> GetByIdAsync(int id);
+        Task UpdateImageUrlAsync(int id, string imageUrl);
     }
 }

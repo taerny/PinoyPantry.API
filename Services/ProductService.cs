@@ -58,5 +58,15 @@ namespace PinoyPantry.API.Services
         {
             return await _productRepository.DeleteProductAsync(id);
         }
+
+        public async Task<ProductResponseDto?> GetByIdAsync(int id)
+        {
+            return await GetProductByIdAsync(id);
+        }
+
+        public async Task UpdateImageUrlAsync(int id, string imageUrl)
+        {
+            await _productRepository.UpdateImageUrlAsync(id, imageUrl);
+        }
     }
 }
