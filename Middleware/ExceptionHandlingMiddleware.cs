@@ -36,21 +36,14 @@ namespace PinoyPantry.API.Middleware
 
             // In development, include the real error so we can debug it
             // In production, show a safe generic message only
-            var response = isDevelopment
-                ? new
-                {
-                    status = context.Response.StatusCode,
-                    message = exception.Message,
-                    detail = exception.InnerException?.Message,
-                    traceId = context.TraceIdentifier
-                }
-                : new
-                {
-                    status = context.Response.StatusCode,
-                    message = "An unexpected error occurred. Please try again later.",
-                    detail = (string?)null,
-                    traceId = context.TraceIdentifier
-                };
+            // Temporarily showing real errors in all environments for debugging
+            var response = new
+            {
+                status = context.Response.StatusCode,
+                message = exception.Message,
+                detail = exception.InnerException?.Message,
+                traceId = context.TraceIdentifier
+            };
 
             var json = JsonSerializer.Serialize(response);
             await context.Response.WriteAsync(json);
