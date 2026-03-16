@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PinoyPantry.API.Services;
 
@@ -27,6 +28,7 @@ public class ImageController : ControllerBase
     /// Upload an image and optionally attach it to a product.
     /// POST /api/image/upload?productId=2
     /// </summary>
+    [Authorize(Roles = "Admin")]
     [HttpPost("upload")]
     public async Task<IActionResult> Upload(IFormFile file, [FromQuery] int? productId)
     {

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PinoyPantry.API.DTOs;
 using PinoyPantry.API.Services;
@@ -35,6 +36,7 @@ namespace PinoyPantry.API.Controllers
         }
 
         // POST: api/products
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<ActionResult<ProductResponseDto>> CreateProduct(CreateProductDto productDto)
         {
@@ -43,6 +45,7 @@ namespace PinoyPantry.API.Controllers
         }
 
         // PUT: api/products/5
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<ActionResult<ProductResponseDto>> UpdateProduct(int id, UpdateProductDto productDto)
         {
@@ -54,6 +57,7 @@ namespace PinoyPantry.API.Controllers
         }
 
         // DELETE: api/products/5
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteProduct(int id)
         {
