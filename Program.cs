@@ -67,6 +67,7 @@ builder.Services.AddAuthentication(options =>
 // Repositories and Services
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Azure Blob Storage
 builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
@@ -98,29 +99,7 @@ var app = builder.Build();
 // Seed roles and admin user on startup
 using (var scope = app.Services.CreateScope())
 {
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-    string[] roles = { "Admin", "Customer" };
-    foreach (var role in roles)
-    {
-        if (!await roleManager.RoleExistsAsync(role))
-            await roleManager.CreateAsync(new IdentityRole(role));
-    }
-
-    var adminEmail = "admin@pinoypantry.com";
-    if (await userManager.FindByEmailAsync(adminEmail) == null)
-    {
-        var admin = new ApplicationUser
-        {
-            UserName = adminEmail,
-            Email = adminEmail,
-            FullName = "PinoyPantry Admin",
-            EmailConfirmed = true
-        };
-        await userManager.CreateAsync(admin, "Admin123!");
-        await userManager.AddToRoleAsync(admin, "Admin");
-    }
+    await DataSeeder.SeedRolesAndAdmin(scope.ServiceProvider);
 }
 
 // Global exception handling — must be first in the pipeline
