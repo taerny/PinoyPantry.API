@@ -8,5 +8,6 @@ namespace PinoyPantry.API.DTOs
         public decimal Price { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
+        public int StockQuantity { get; set; }
     }
 }
