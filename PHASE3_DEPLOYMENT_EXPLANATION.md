@@ -509,6 +509,249 @@ credentials exist.
 
 ---
 
+## Understanding CI/CD and GitHub Actions (Detailed)
+
+This section explains *how* the automation works so you can read and modify
+workflow files yourself.
+
+---
+
+### Setup Order: What to Do First (and Why)
+
+When you set up CI/CD for the .NET API, the order matters. Here is the sequence
+we followed and the reason for each step.
+
+| Order | What you do | What it does | Why we need it |
+|-------|----------------|--------------|----------------|
+| **1** | Create the App Service in Azure (Step 4) | Gives you a live URL where the API will run | Without it, there is nowhere to deploy. The workflow will later push files *to* this App Service. |
+| **2** | Enable "SCM Basic Auth" in App Service (Step 6a) | Turns on username/password auth for the deployment endpoint | By default Azure blocks this. GitHub Actions needs to authenticate when it uploads files — so we must enable "Basic Auth" for the SCM (deployment) endpoint. |
+| **3** | Download the publish profile from App Service (Step 6b) | Saves an XML file with deployment URL, username, and password | That file is the "key" to deploy. The workflow cannot push code without these credentials. We never put them in code — next step. |
+| **4** | Add the publish profile as a GitHub Secret (Step 6c) | Stores the XML in GitHub under a name like `AZURE_WEBAPP_PUBLISH_PROFILE` | Secrets are encrypted and hidden. The workflow file can reference `secrets.AZURE_WEBAPP_PUBLISH_PROFILE` so the runner gets the credentials at run time without you ever committing a password. |
+| **5** | Create the workflow file `.github/workflows/deploy-api.yml` (Step 6d) | Tells GitHub: "When someone pushes to main, run these steps" | This is the actual automation. It checks out code, builds and publishes the .NET app, then uses the secret to deploy the result to the App Service. Without this file, nothing runs automatically. |
+
+**In one sentence:** You create the target (App Service), get credentials (publish profile), store them safely (GitHub Secret), then add a recipe (workflow file) that uses those credentials to build and deploy on every push.
+
+For the **frontend**, Azure Static Web Apps does steps 2–5 for you when you connect the repo: it creates the workflow file and the token secret. You only add things like `VITE_API_URL` in the workflow so the build step knows the API URL.
+
+---
+
+### What Is a Workflow?
+
+A **workflow** is a YAML file in `.github/workflows/`. It tells GitHub:
+"When X happens (e.g. push to main), run these steps on a fresh machine."
+
+- **Trigger (`on:`)** — When does this run? e.g. `push` to `main`, or `pull_request`.
+- **Job** — A group of steps that run in order on one machine (e.g. `build-and-deploy`).
+- **Step** — One action: checkout code, run a command, or use a pre-built "action".
+
+GitHub spins up a clean virtual machine (Windows or Linux), runs your steps,
+and then discards the machine. So every run starts from zero — no leftover
+files from last time.
+
+### The API Workflow — Line by Line
+
+File: `PinoyPantry.API/.github/workflows/deploy-api.yml`
+
+```yaml
+name: Deploy .NET API to Azure App Service
+
+on:
+  push:
+    branches:
+      - main          # Only run when someone pushes to the main branch
+```
+
+- **`name`** — Label shown in the GitHub Actions tab. Doesn't affect behavior.
+- **`on: push: branches: main`** — Trigger: every push to `main` runs this workflow.
+
+```yaml
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest   # Use a Windows VM (needed for .NET)
+```
+
+- **`jobs`** — You can have multiple jobs (e.g. build, test, deploy). We have one.
+- **`runs-on: windows-latest`** — GitHub provides a Windows Server VM. Without this, no machine runs your steps.
+
+```yaml
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+```
+
+- **Step 1 — Checkout** — `actions/checkout@v4` is a pre-written action that clones your
+  repo into the VM. After this step, your code is in the working directory (e.g. `C:\actions-runner\_work\PinoyPantry.API\PinoyPantry.API`).
+
+```yaml
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+```
+
+- **Step 2 — Setup .NET** — The VM has no .NET by default. This action installs
+  the .NET 8 SDK so `dotnet build` and `dotnet publish` work.
+
+```yaml
+      - name: Restore dependencies
+        run: dotnet restore
+```
+
+- **Step 3 — Restore** — Same as running `dotnet restore` on your PC. Downloads
+  NuGet packages listed in `.csproj`.
+
+```yaml
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+```
+
+- **Step 4 — Build** — Compiles C# to DLLs. `--no-restore` skips restore again.
+  `Release` = optimized for production.
+
+```yaml
+      - name: Publish
+        run: dotnet publish --configuration Release --output ./publish --no-build
+```
+
+- **Step 5 — Publish** — Produces a `./publish` folder with the API plus all
+  dependencies — the exact folder you would upload to a server. No need to
+  copy DLLs by hand.
+
+```yaml
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: pinoypantry-api
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: ./publish
+```
+
+- **Step 6 — Deploy** — `azure/webapps-deploy@v3` uploads the `./publish` folder
+  to Azure App Service. It uses the **publish profile** stored as a GitHub Secret.
+  `secrets.AZURE_WEBAPP_PUBLISH_PROFILE` is the value you pasted in Settings →
+  Secrets and variables → Actions. GitHub injects it at run time; it never
+  appears in the repo or logs.
+
+**Summary:** Push to main → GitHub runs this file → checkout, restore, build,
+publish, deploy. In about 3–5 minutes the live API is updated.
+
+---
+
+### The Frontend Workflow — Line by Line
+
+File: `PinoyPantry.Client/.github/workflows/azure-static-web-apps-gentle-dune-0c69a8700.yml`
+
+Azure Static Web Apps created this file when you connected the repo. You don't
+have to write it from scratch, but understanding it helps.
+
+```yaml
+name: Azure Static Web Apps CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches:
+      - main
+```
+
+- **Trigger** — Runs on every **push** to `main` (deploy to production) and on
+  **pull request** events (open, update, reopen, close). So PRs get a preview
+  URL, and merging to main deploys the real site.
+
+```yaml
+jobs:
+  build_and_deploy_job:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.action != 'closed')
+    runs-on: ubuntu-latest
+```
+
+- **Job** — Runs on Linux (`ubuntu-latest`). The `if` condition means: run on
+  push, or on pull_request when it's not "closed" (so we don't redeploy when
+  someone closes a PR).
+
+```yaml
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+          lfs: false
+```
+
+- **Step 1 — Checkout** — Same idea as the API: clone the repo into the VM.
+
+```yaml
+      - name: Build And Deploy
+        id: builddeploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_DUNE_0C69A8700 }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: "upload"
+          app_location: "/"
+          api_location: ""
+          output_location: "build"
+        env:
+          VITE_API_URL: https://pinoypantry-api-f0a8hbfwc6fwdfbg.australiaeast-01.azurewebsites.net
+```
+
+- **Step 2 — Build and deploy** — One action does both:
+  - **`azure_static_web_apps_api_token`** — Secret that Azure created when you
+    connected the Static Web App to GitHub. It lets the action talk to your
+    Azure resource.
+  - **`repo_token`** — Built-in `GITHUB_TOKEN` for PR comments (e.g. "Preview URL").
+  - **`action: "upload"`** — "Build the app and upload to Azure."
+  - **`app_location: "/"`** — Repo root = where the React app lives.
+  - **`output_location: "build"`** — After `npm run build`, the output is in
+    `build/`. The action uploads that folder.
+  - **`env: VITE_API_URL: ...`** — Vite bakes `VITE_*` variables into the JS
+    at build time. So the built app knows the live API URL. This is why we
+    added it here; Azure portal env vars are not available during the build.
+
+So: push to main → checkout → run Static Web Apps action (install Node, npm
+install, npm run build, upload `build/`) → live site updates in ~2 minutes.
+
+```yaml
+  close_pull_request_job:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    ...
+        with:
+          action: "close"
+```
+
+- **Second job** — When a PR is **closed**, this runs and tells Azure to remove
+  the preview deployment for that PR. Keeps the list of preview URLs clean.
+
+---
+
+### Secrets — Why and Where
+
+| Secret name | Repo | Who created it | Used for |
+|-------------|------|-----------------|----------|
+| `AZURE_WEBAPP_PUBLISH_PROFILE` | PinoyPantry.API | You (from App Service publish profile) | Deploy API to App Service |
+| `AZURE_STATIC_WEB_APPS_API_TOKEN_GENTLE_DUNE_0C69A8700` | PinoyPantry.Client | Azure (when you connected GitHub) | Deploy frontend to Static Web App |
+| `GITHUB_TOKEN` | PinoyPantry.Client | GitHub (automatic) | PR comments, repo access |
+
+Never put secrets in the YAML as plain text. Always use `${{ secrets.NAME }}`.
+GitHub hides secret values in the logs.
+
+---
+
+### Quick Reference: When Does What Run?
+
+| You do this | What runs |
+|-------------|-----------|
+| `git push origin main` on PinoyPantry.API | API workflow: build + deploy to App Service |
+| `git push origin main` on PinoyPantry.Client | Frontend workflow: build + deploy to Static Web App |
+| Open or update a PR on PinoyPantry.Client | Frontend workflow: build + deploy a **preview** URL |
+| Close a PR on PinoyPantry.Client | Frontend workflow: "close" job removes preview |
+
+No manual deploy step. Push (or merge) is the deploy.
+
+---
+
 ## Summary — The CI/CD Flow
 
 **Frontend (automatic, set up by Azure):**
