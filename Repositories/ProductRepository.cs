@@ -84,5 +84,13 @@ namespace PinoyPantry.API.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task<int> DeleteAllProductsAsync()
+        {
+            var count = await _context.Products.CountAsync();
+            _context.Products.RemoveRange(_context.Products);
+            await _context.SaveChangesAsync();
+            return count;
+        }
     }
 }

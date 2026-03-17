@@ -67,5 +67,14 @@ namespace PinoyPantry.API.Controllers
 
             return NoContent();
         }
+
+        // DELETE: api/products/all  — Admin only, clears entire products table
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("all")]
+        public async Task<ActionResult> DeleteAllProducts()
+        {
+            var deleted = await _productService.DeleteAllProductsAsync();
+            return Ok(new { message = $"Cleared {deleted} product(s) successfully." });
+        }
     }
 }
