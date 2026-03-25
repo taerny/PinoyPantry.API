@@ -92,5 +92,13 @@ namespace PinoyPantry.API.Repositories
             await _context.SaveChangesAsync();
             return count;
         }
+
+        public async Task<Dictionary<string, int>> GetCategoryCountsAsync()
+        {
+            return await _context.Products
+                .GroupBy(p => p.Category)
+                .Select(g => new { Category = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.Category, x => x.Count);
+        }
     }
 }

@@ -73,5 +73,10 @@ namespace PinoyPantry.API.Services
         {
             return await _productRepository.DeleteAllProductsAsync();
         }
+
+        public async Task<Dictionary<string, int>> GetCategoryCountsAsync()
+        {
+            return await _productRepository.GetCategoryCountsAsync();
+        }
     }
 }

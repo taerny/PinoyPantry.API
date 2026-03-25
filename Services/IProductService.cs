@@ -12,5 +12,6 @@ namespace PinoyPantry.API.Services
         Task<ProductResponseDto?> GetByIdAsync(int id);
         Task UpdateImageUrlAsync(int id, string imageUrl);
         Task<int> DeleteAllProductsAsync();
+        Task<Dictionary<string, int>> GetCategoryCountsAsync();
     }
 }

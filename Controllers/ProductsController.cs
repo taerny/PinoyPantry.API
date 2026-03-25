@@ -24,6 +24,14 @@ namespace PinoyPantry.API.Controllers
             return Ok(result);
         }
 
+        // GET: api/products/category-counts
+        [HttpGet("category-counts")]
+        public async Task<ActionResult<Dictionary<string, int>>> GetCategoryCounts()
+        {
+            var counts = await _productService.GetCategoryCountsAsync();
+            return Ok(counts);
+        }
+
         // GET: api/products/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductResponseDto>> GetProduct(int id)
