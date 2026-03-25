@@ -948,6 +948,7 @@ PinoyPantry.Client/
 | POST | /api/products | Admin | Create product |
 | PUT | /api/products/{id} | Admin | Update product |
 | DELETE | /api/products/{id} | Admin | Delete product |
+| DELETE | /api/products/all | Admin | Delete all products (admin-only reset) |
 | POST | /api/image/upload | Admin | Upload image to Azure Blob |
 | POST | /api/auth/register | None | Register new user |
 | POST | /api/auth/login | None | Login, returns JWT |
@@ -956,6 +957,7 @@ PinoyPantry.Client/
 | GET | /api/auth/dashboard-stats | Admin | Get store stats |
 | POST | /api/payment/create-payment-intent | None | Create Stripe PaymentIntent |
 | GET | /api/payment/config | None | Get Stripe publishable key |
+| POST | /api/orders | None (for now) | Apply an order by reducing product stock based on cart items |
 
 ---
 
@@ -966,7 +968,87 @@ PinoyPantry.Client/
 | Real Stripe keys | Sign up at stripe.com, get test keys, replace placeholders in appsettings.json and Azure env vars |
 | Azure migration | Run `Update-Database -Connection "..."` to add LastLoginAt to Azure SQL |
 | Unit tests | xUnit + Moq + FluentAssertions for API services |
-| Order history | Store completed orders in database |
+| Order history | Store completed orders in database (Orders + OrderItems) |
 | Customer admin | List of registered customers in admin panel |
 | Search in admin products | Filter table by name/category |
 | Stock alerts | Highlight products with stock = 0 in dashboard |
+
+---
+
+## Part 14 — Recent Additions (Since Initial Write-up)
+
+### Clear All Products (Admin Reset)
+
+- New API endpoint: `DELETE /api/products/all` (Admin only).
+- Admin UI:
+  - `/admin/products` shows a **"Clear All"** button next to "Add Product".
+  - Clicking it opens a dedicated confirmation modal that warns:
+    - All products will be permanently deleted.
+    - Shows how many products will be removed.
+  - On confirm, the frontend calls `/api/products/all` and then refreshes
+    the list.
+- Use case:
+  - When you want to wipe demo/seed items and start a realistic inventory
+    without manually deleting each row.
+
+### Stock Deduction After Checkout
+
+- New API endpoint: `POST /api/orders`.
+  - Controller: `OrdersController`.
+  - Input: array of `CartItemDto` (`productId`, `name`, `price`, `quantity`).
+  - Behavior:
+    - Loads all matching `Products` by `productId`.
+    - Decrements `StockQuantity` by the ordered `quantity` for each item.
+    - Clamps stock at 0 (never negative).
+    - Does not yet create full Order/OrderItem entities — it is focused
+      purely on **inventory adjustment**.
+- `CheckoutPage.tsx` has a helper `applyInventoryAndComplete()` that:
+  1. Posts the current cart items to `/api/orders`.
+  2. Generates an order number (`PNxxxxx`).
+  3. Sets `orderComplete = true`.
+  4. Clears the cart via `CartContext.clearCart()`.
+- For **Stripe card payments**, `StripeCheckout` calls `onSuccess()` after
+  `stripe.confirmPayment` succeeds; `onSuccess` simply calls
+  `applyInventoryAndComplete()`.
+
+Result: every successful checkout now reduces stock in the database so that
+admin inventory reflects real orders.
+
+### Stripe UX – In-place Confirmation and Clear Messaging
+
+- Previously, `stripe.confirmPayment` was called with a `return_url`.
+  - Stripe would try to redirect to `/checkout?success=true`.
+  - React state could be reset on redirect, so the success screen was not
+    always visible.
+- Now, `StripeCheckout` calls:
+
+  ```ts
+  const { error } = await stripe.confirmPayment({
+    elements,
+    confirmParams: {},
+    redirect: 'if_required',
+  });
+  ```
+
+  - This confirms the payment **in-place** (no hard redirect).
+  - If there is no error, it calls `onSuccess()` so the React app can show
+    its own success UI.
+
+- `CheckoutPage` shows a clearer success screen:
+  - Title: **"Payment Successful!"** for card payments.
+  - Text explicitly states that the card was charged securely via Stripe.
+  - Shows order number and total.
+  - "Continue Shopping" button navigates back to the home page.
+
+### Payment Methods Simplified (NZ Context)
+
+- Earlier versions of the checkout included placeholder options:
+  - Cash on Delivery
+  - GCash
+  - PayMaya
+- These were removed to better match a New Zealand-based store.
+- Only one payment method is now available:
+  - **Credit/Debit Card (Stripe)**.
+  - Default `paymentMethod` is set to `'card'`, so the card payment block is
+    shown immediately without extra clicks.
+
