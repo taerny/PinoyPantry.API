@@ -88,7 +88,8 @@ builder.Services.AddCors(options =>
         policy.SetIsOriginAllowed(origin =>
               {
                   if (new Uri(origin).Host == "localhost") return true;
-                  return origin == "https://gentle-dune-0c69a8700.6.azurestaticapps.net";
+                  return origin == "https://gentle-dune-0c69a8700.6.azurestaticapps.net"
+                      || origin == "https://www.pinoypantry.co.nz";
               })
               .AllowAnyHeader()
               .AllowAnyMethod();
