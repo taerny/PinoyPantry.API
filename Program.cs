@@ -29,7 +29,9 @@ builder.Services.AddSwaggerGen(options =>
 
 // Database
 builder.Services.AddDbContext<ApplicationDBContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure(maxRetryCount: 5, maxRetryDelay: TimeSpan.FromSeconds(10), errorNumbersToAdd: null)));
 
 // ASP.NET Identity
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
@@ -101,7 +103,15 @@ var app = builder.Build();
 // Seed roles and admin user on startup
 using (var scope = app.Services.CreateScope())
 {
-    await DataSeeder.SeedRolesAndAdmin(scope.ServiceProvider);
+    try
+    {
+        await DataSeeder.SeedRolesAndAdmin(scope.ServiceProvider);
+    }
+    catch (Exception ex)
+    {
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "DataSeeder failed — app will continue but roles/admin may not be seeded.");
+    }
 }
 
 // Global exception handling — must be first in the pipeline
