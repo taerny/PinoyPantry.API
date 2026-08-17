@@ -10,8 +10,10 @@ namespace PinoyPantry.API.Mappings
         {
             // All field names now match — no .ForMember() needed
             CreateMap<Product, ProductResponseDto>();
+            CreateMap<Product, AdminProductResponseDto>();
             CreateMap<CreateProductDto, Product>();
             CreateMap<UpdateProductDto, Product>();
+            CreateMap<ImportProductDto, Product>();
         }
     }
 }

@@ -6,5 +6,6 @@ namespace PinoyPantry.API.DTOs
         public int Limit { get; set; } = 12;
         public string? Category { get; set; }
         public string? Search { get; set; }
+        public bool IncludeUnpublished { get; set; } = false;
     }
 }

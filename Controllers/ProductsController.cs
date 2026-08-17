@@ -17,10 +17,21 @@ namespace PinoyPantry.API.Controllers
         }
 
         // GET: api/products?page=1&limit=12&category=snacks&search=vinegar
+        // Public endpoint — always published-only, regardless of what's in the query string.
         [HttpGet]
         public async Task<ActionResult<PagedResult<ProductResponseDto>>> GetAllProducts([FromQuery] ProductQueryParams query)
         {
+            query.IncludeUnpublished = false;
             var result = await _productService.GetAllProductsAsync(query);
+            return Ok(result);
+        }
+
+        // GET: api/products/admin?page=1&limit=50 — Admin only, includes unpublished products and cost price
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin")]
+        public async Task<ActionResult<PagedResult<AdminProductResponseDto>>> GetAllProductsAdmin([FromQuery] ProductQueryParams query)
+        {
+            var result = await _productService.GetAllProductsAdminAsync(query);
             return Ok(result);
         }
 
@@ -83,6 +94,18 @@ namespace PinoyPantry.API.Controllers
         {
             var deleted = await _productService.DeleteAllProductsAsync();
             return Ok(new { message = $"Cleared {deleted} product(s) successfully." });
+        }
+
+        // POST: api/products/import — Admin only, bulk-creates products from a parsed CSV
+        [Authorize(Roles = "Admin")]
+        [HttpPost("import")]
+        public async Task<ActionResult> ImportProducts(List<ImportProductDto> products)
+        {
+            if (products == null || products.Count == 0)
+                return BadRequest(new { message = "No products provided." });
+
+            var imported = await _productService.ImportProductsAsync(products);
+            return Ok(new { message = $"Imported {imported} product(s) successfully." });
         }
     }
 }

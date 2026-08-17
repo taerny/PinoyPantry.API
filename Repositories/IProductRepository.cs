@@ -13,5 +13,6 @@ namespace PinoyPantry.API.Repositories
         Task UpdateImageUrlAsync(int id, string imageUrl);
         Task<int> DeleteAllProductsAsync();
         Task<Dictionary<string, int>> GetCategoryCountsAsync();
+        Task<int> ImportProductsAsync(IEnumerable<Product> products);
     }
 }

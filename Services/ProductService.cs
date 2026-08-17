@@ -78,5 +78,25 @@ namespace PinoyPantry.API.Services
         {
             return await _productRepository.GetCategoryCountsAsync();
         }
+
+        public async Task<PagedResult<AdminProductResponseDto>> GetAllProductsAdminAsync(ProductQueryParams query)
+        {
+            query.IncludeUnpublished = true;
+            var (products, totalCount) = await _productRepository.GetAllProductsAsync(query);
+
+            return new PagedResult<AdminProductResponseDto>
+            {
+                Data = _mapper.Map<IEnumerable<AdminProductResponseDto>>(products),
+                TotalCount = totalCount,
+                Page = query.Page,
+                Limit = query.Limit
+            };
+        }
+
+        public async Task<int> ImportProductsAsync(IEnumerable<ImportProductDto> products)
+        {
+            var entities = _mapper.Map<IEnumerable<Product>>(products);
+            return await _productRepository.ImportProductsAsync(entities);
+        }
     }
 }

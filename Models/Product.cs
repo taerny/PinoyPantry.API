@@ -15,5 +15,10 @@ namespace PinoyPantry.API.Models
         public string Category { get; set; } = string.Empty;
         public int StockQuantity { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal CostPrice { get; set; }
+
+        public bool IsPublished { get; set; } = false;
     }
 }

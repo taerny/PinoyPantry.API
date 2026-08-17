@@ -18,6 +18,9 @@ namespace PinoyPantry.API.Repositories
         {
             var products = _context.Products.AsQueryable();
 
+            if (!query.IncludeUnpublished)
+                products = products.Where(p => p.IsPublished);
+
             if (!string.IsNullOrWhiteSpace(query.Category))
                 products = products.Where(p => p.Category == query.Category);
 
@@ -67,9 +70,11 @@ namespace PinoyPantry.API.Repositories
             existing.Name = product.Name;
             existing.Description = product.Description;
             existing.Price = product.Price;
+            existing.CostPrice = product.CostPrice;
             existing.ImageUrl = product.ImageUrl;
             existing.Category = product.Category;
             existing.StockQuantity = product.StockQuantity;
+            existing.IsPublished = product.IsPublished;
 
             await _context.SaveChangesAsync();
             return existing;
@@ -96,9 +101,18 @@ namespace PinoyPantry.API.Repositories
         public async Task<Dictionary<string, int>> GetCategoryCountsAsync()
         {
             return await _context.Products
+                .Where(p => p.IsPublished)
                 .GroupBy(p => p.Category)
                 .Select(g => new { Category = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.Category, x => x.Count);
+        }
+
+        public async Task<int> ImportProductsAsync(IEnumerable<Product> products)
+        {
+            var list = products.ToList();
+            _context.Products.AddRange(list);
+            await _context.SaveChangesAsync();
+            return list.Count;
         }
     }
 }
