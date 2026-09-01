@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PinoyPantry.API.Data;
 
@@ -11,9 +12,11 @@ using PinoyPantry.API.Data;
 namespace PinoyPantry.API.Migrations
 {
     [DbContext(typeof(ApplicationDBContext))]
-    partial class ApplicationDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260901082401_AddHeroContent")]
+    partial class AddHeroContent
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -250,10 +253,6 @@ namespace PinoyPantry.API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FooterAboutText")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Headline")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -262,22 +261,7 @@ namespace PinoyPantry.API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<bool>("IsMaintenanceMode")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("MaintenanceHeadline")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("MaintenanceMessage")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Subtext")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TopBarText")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -294,14 +278,9 @@ namespace PinoyPantry.API.Migrations
                             Id = 1,
                             ButtonLink = "/category/all-products",
                             ButtonText = "Shop Now",
-                            FooterAboutText = "Your one-stop shop for authentic Filipino foods. Bringing the taste of home to you!",
                             Headline = "Real Filipino Flavours",
                             HighlightedText = "From Our Pantry to Yours",
-                            IsMaintenanceMode = false,
-                            MaintenanceHeadline = "We're Cooking Up Something New!",
-                            MaintenanceMessage = "PinoyPantry is getting a fresh batch of updates. Balik kami agad — hang tight, we'll be back before you can say 'Pasabuy!'",
                             Subtext = "From classic canned goods to your favorite snacks — everything you need to bring the taste of home to your kitchen.",
-                            TopBarText = "Proudly Filipino-owned, serving New Zealand 🇳🇿",
                             UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc)
                         });
                 });

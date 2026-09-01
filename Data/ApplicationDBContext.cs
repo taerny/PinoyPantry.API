@@ -11,10 +11,29 @@ namespace PinoyPantry.API.Data
         }
 
         public DbSet<Product> Products { get; set; }
+        public DbSet<HeroContent> HeroContents { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<HeroContent>().HasData(
+                new HeroContent
+                {
+                    Id = 1,
+                    Headline = "Real Filipino Flavours",
+                    HighlightedText = "From Our Pantry to Yours",
+                    Subtext = "From classic canned goods to your favorite snacks — everything you need to bring the taste of home to your kitchen.",
+                    ButtonText = "Shop Now",
+                    ButtonLink = "/category/all-products",
+                    FooterAboutText = "Your one-stop shop for authentic Filipino foods. Bringing the taste of home to you!",
+                    TopBarText = "Proudly Filipino-owned, serving New Zealand 🇳🇿",
+                    IsMaintenanceMode = false,
+                    MaintenanceHeadline = "We're Cooking Up Something New!",
+                    MaintenanceMessage = "PinoyPantry is getting a fresh batch of updates. Balik kami agad — hang tight, we'll be back before you can say 'Pasabuy!'",
+                    UpdatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                }
+            );
 
             modelBuilder.Entity<Product>().HasData(
                 new Product { Id = 1, Name = "Lucky Me Pancit Canton Original", Description = "Classic Filipino instant noodles with savory sauce.", Price = 1.50m, ImageUrl = "", Category = "Noodles", StockQuantity = 100, CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
