@@ -10,5 +10,7 @@ namespace PinoyPantry.API.DTOs
         public string Category { get; set; } = string.Empty;
         public int StockQuantity { get; set; }
         public bool IsPublished { get; set; }
+        public decimal? RecommendedRetail { get; set; }
+        public decimal? Margin { get; set; }
     }
 }

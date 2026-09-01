@@ -8,5 +8,7 @@ namespace PinoyPantry.API.DTOs
         public decimal CostPrice { get; set; }
         public decimal Price { get; set; }
         public bool IsPublished { get; set; }
+        public decimal? RecommendedRetail { get; set; }
+        public decimal? Margin { get; set; }
     }
 }

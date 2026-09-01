@@ -96,7 +96,7 @@ namespace PinoyPantry.API.Controllers
             return Ok(new { message = $"Cleared {deleted} product(s) successfully." });
         }
 
-        // POST: api/products/import — Admin only, bulk-creates products from a parsed CSV
+        // POST: api/products/import — Admin only, bulk-creates products from reviewed import rows
         [Authorize(Roles = "Admin")]
         [HttpPost("import")]
         public async Task<ActionResult> ImportProducts(List<ImportProductDto> products)
@@ -106,6 +106,33 @@ namespace PinoyPantry.API.Controllers
 
             var imported = await _productService.ImportProductsAsync(products);
             return Ok(new { message = $"Imported {imported} product(s) successfully." });
+        }
+
+        // POST: api/products/import/preview — Admin only. Parses a raw supplier .csv/.xlsx
+        // straight from the file (no manual reformatting) and returns review-ready rows;
+        // nothing is written to the database here.
+        [Authorize(Roles = "Admin")]
+        [HttpPost("import/preview")]
+        public ActionResult<List<ImportPreviewRowDto>> PreviewImport(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "No file uploaded." });
+
+            List<ImportPreviewRowDto> rows;
+            try
+            {
+                using var stream = file.OpenReadStream();
+                rows = ProductImportParseService.Parse(stream, file.FileName);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+
+            if (rows.Count == 0)
+                return BadRequest(new { message = "No rows found — check the file has Name, Category, StockQuantity, CostPrice, Price columns (or common supplier-sheet equivalents)." });
+
+            return Ok(rows);
         }
     }
 }
