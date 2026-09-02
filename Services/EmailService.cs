@@ -39,7 +39,7 @@ public class EmailService : IEmailService
             IsBodyHtml = false
         };
 
-        mail.To.Add(toAddress);
+        AddRecipients(mail.To, toAddress);
         mail.ReplyToList.Add(new MailAddress(dto.Email, dto.Name));
 
         await client.SendMailAsync(mail);
@@ -133,7 +133,7 @@ public class EmailService : IEmailService
             IsBodyHtml = true
         };
 
-        mail.To.Add(toAddress);
+        AddRecipients(mail.To, toAddress);
         await client.SendMailAsync(mail);
     }
 
@@ -159,6 +159,16 @@ public class EmailService : IEmailService
 
         mail.To.Add(order.CustomerEmail);
         await client.SendMailAsync(mail);
+    }
+
+    // Email:ToAddress may hold one or several comma-separated addresses (e.g. the
+    // owner and a business partner both getting order notifications).
+    private static void AddRecipients(MailAddressCollection recipients, string addresses)
+    {
+        foreach (var address in addresses.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            recipients.Add(address);
+        }
     }
 
     private SmtpClient BuildSmtpClient(out string smtpUser, out string toAddress)
