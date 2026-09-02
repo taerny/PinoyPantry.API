@@ -1,7 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PinoyPantry.API.Data;
 using PinoyPantry.API.DTOs;
+using PinoyPantry.API.Services;
 
 namespace PinoyPantry.API.Controllers;
 
@@ -9,45 +9,81 @@ namespace PinoyPantry.API.Controllers;
 [Route("api/[controller]")]
 public class OrdersController : ControllerBase
 {
-    private readonly ApplicationDBContext _context;
+    private readonly IOrderService _orderService;
 
-    public OrdersController(ApplicationDBContext context)
+    public OrdersController(IOrderService orderService)
     {
-        _context = context;
+        _orderService = orderService;
     }
 
-    /// <summary>
-    /// Applies an order by decrementing stock quantities for the given cart items.
-    /// </summary>
-    /// <remarks>
-    /// This is a simplified endpoint for the portfolio demo. It does not yet
-    /// create Order / OrderItem records, it only updates product stock.
-    /// </remarks>
-    [HttpPost]
-    public async Task<IActionResult> ApplyOrder([FromBody] List<CartItemDto> items)
+    // GET: api/orders — Admin only
+    [Authorize(Roles = "Admin")]
+    [HttpGet]
+    public async Task<ActionResult<List<OrderResponseDto>>> GetAllOrders()
     {
-        if (items == null || items.Count == 0)
+        return Ok(await _orderService.GetAllOrdersAsync());
+    }
+
+    // GET: api/orders/5 — Admin only
+    [Authorize(Roles = "Admin")]
+    [HttpGet("{id}")]
+    public async Task<ActionResult<OrderResponseDto>> GetOrder(int id)
+    {
+        var order = await _orderService.GetOrderByIdAsync(id);
+        if (order == null)
+            return NotFound(new { message = $"Order #{id} not found." });
+
+        return Ok(order);
+    }
+
+    // POST: api/orders — public, submitted from checkout
+    [HttpPost]
+    public async Task<ActionResult<OrderResponseDto>> CreateOrder(CreateOrderDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.CustomerName) || string.IsNullOrWhiteSpace(dto.CustomerEmail))
+            return BadRequest(new { message = "Name and email are required." });
+
+        try
         {
-            return BadRequest(new { message = "Cart is empty." });
+            var order = await _orderService.CreateOrderAsync(dto);
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
-
-        var productIds = items.Select(i => i.ProductId).ToList();
-        var products = await _context.Products
-            .Where(p => productIds.Contains(p.Id))
-            .ToListAsync();
-
-        foreach (var item in items)
+        catch (InvalidOperationException ex)
         {
-            var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-            if (product == null) continue;
-
-            var newQty = product.StockQuantity - item.Quantity;
-            product.StockQuantity = newQty < 0 ? 0 : newQty;
+            return BadRequest(new { message = ex.Message });
         }
+    }
 
-        await _context.SaveChangesAsync();
+    // PUT: api/orders/5/status — Admin only, e.g. mark Paid once bank transfer is confirmed
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id}/status")]
+    public async Task<ActionResult<OrderResponseDto>> UpdateStatus(int id, UpdateOrderStatusDto dto)
+    {
+        var (order, error) = await _orderService.UpdateStatusAsync(id, dto.Status);
 
-        return Ok(new { message = "Inventory updated for order." });
+        if (order == null && error == null)
+            return NotFound(new { message = $"Order #{id} not found." });
+
+        if (error != null)
+            return UnprocessableEntity(new { message = error });
+
+        return Ok(order);
+    }
+
+    // PUT: api/orders/5/delivery-fee — Admin only. Sets the fee once arranged with the customer
+    // (for "Delivery outside Dunedin" orders, where it starts unknown) and re-notifies them.
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id}/delivery-fee")]
+    public async Task<ActionResult<OrderResponseDto>> UpdateDeliveryFee(int id, UpdateDeliveryFeeDto dto)
+    {
+        var (order, error) = await _orderService.UpdateDeliveryFeeAsync(id, dto.DeliveryFee);
+
+        if (order == null && error == null)
+            return NotFound(new { message = $"Order #{id} not found." });
+
+        if (error != null)
+            return UnprocessableEntity(new { message = error });
+
+        return Ok(order);
     }
 }
-
