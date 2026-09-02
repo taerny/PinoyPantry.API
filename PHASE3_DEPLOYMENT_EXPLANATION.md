@@ -108,7 +108,7 @@ SQL Server Express, but hosted by Microsoft so the live API can reach it.
    - Location: Australia East
    - Authentication: SQL authentication
    - Admin login: `pinoyadmin`
-   - Password: `PinoyPantry2026!`
+   - Password: `YOUR_DB_PASSWORD_ROTATED_SEE_AZURE_PORTAL`
 5. Selected "Free offer" (32 GB, free for 12 months)
 6. Review + create → Create
 
@@ -118,7 +118,7 @@ SQL Server Express, but hosted by Microsoft so the live API can reach it.
 Server:   pinoypantry-server.database.windows.net
 Database: pinoypantry-db
 Username: pinoyadmin
-Password: PinoyPantry2026!
+Password: YOUR_DB_PASSWORD_ROTATED_SEE_AZURE_PORTAL
 ```
 
 **Connection string (ADO.NET / SQL authentication):**
@@ -128,7 +128,7 @@ Server=tcp:pinoypantry-server.database.windows.net,1433;
 Initial Catalog=pinoypantry-db;
 Persist Security Info=False;
 User ID=pinoyadmin;
-Password=PinoyPantry2026!;
+Password=YOUR_DB_PASSWORD_ROTATED_SEE_AZURE_PORTAL;
 MultipleActiveResultSets=False;
 Encrypt=True;
 TrustServerCertificate=False;
@@ -362,7 +362,7 @@ The Azure SQL Database was empty — no tables, no products. We ran
 migrations from Visual Studio targeting the Azure database:
 
 ```
-Update-Database -Connection "Server=tcp:pinoypantry-server.database.windows.net,1433;Initial Catalog=pinoypantry-db;Persist Security Info=False;User ID=pinoyadmin;Password=PinoyPantry2026!;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+Update-Database -Connection "Server=tcp:pinoypantry-server.database.windows.net,1433;Initial Catalog=pinoypantry-db;Persist Security Info=False;User ID=pinoyadmin;Password=YOUR_DB_PASSWORD_ROTATED_SEE_AZURE_PORTAL;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 ```
 
 **First attempt failed:**
@@ -393,7 +393,7 @@ You can browse the Azure SQL Database from SSMS on your PC:
 2. Server name: `pinoypantry-server.database.windows.net`
 3. Authentication: SQL Server Authentication
 4. Login: `pinoyadmin`
-5. Password: `PinoyPantry2026!`
+5. Password: `YOUR_DB_PASSWORD_ROTATED_SEE_AZURE_PORTAL`
 6. Expand pinoypantry-db → Tables → right-click Products →
    "Select Top 1000 Rows"
 
