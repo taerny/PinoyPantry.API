@@ -25,6 +25,10 @@ namespace PinoyPantry.API.DTOs
         public string? CustomerName { get; set; }
         public string? CustomerEmail { get; set; }
         public string? Notes { get; set; }
+        // True (default) = cash already in hand, order starts as Paid. False = "pay me
+        // later" on trust — starts as Pending, same as an online order, so the owner can
+        // mark it Paid via the usual button once the friend actually pays.
+        public bool AlreadyPaid { get; set; } = true;
         public List<OrderItemRequestDto> Items { get; set; } = new();
     }
 

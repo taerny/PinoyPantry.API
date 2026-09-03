@@ -201,7 +201,7 @@ namespace PinoyPantry.API.Services
                 CustomerName = string.IsNullOrWhiteSpace(dto.CustomerName) ? "Walk-in Customer" : dto.CustomerName,
                 CustomerEmail = dto.CustomerEmail ?? string.Empty,
                 Notes = dto.Notes,
-                Status = "Paid", // cash already received — no bank transfer to wait on
+                Status = dto.AlreadyPaid ? "Paid" : "Pending",
                 Channel = "Walk-in",
                 DeliveryMethod = null,
                 DeliveryFee = 0.00m,
