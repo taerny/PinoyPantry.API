@@ -54,6 +54,23 @@ public class OrdersController : ControllerBase
         }
     }
 
+    // POST: api/orders/walk-in — Admin only. Records an in-person cash sale (e.g. a friend
+    // buying directly from the owner). Already paid, so it skips the bank-transfer flow.
+    [Authorize(Roles = "Admin")]
+    [HttpPost("walk-in")]
+    public async Task<ActionResult<OrderResponseDto>> CreateWalkInOrder(CreateWalkInOrderDto dto)
+    {
+        try
+        {
+            var order = await _orderService.CreateWalkInOrderAsync(dto);
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     // PUT: api/orders/5/status — Admin only, e.g. mark Paid once bank transfer is confirmed
     [Authorize(Roles = "Admin")]
     [HttpPut("{id}/status")]

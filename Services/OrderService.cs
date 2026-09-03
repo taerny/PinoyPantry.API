@@ -159,6 +159,88 @@ namespace PinoyPantry.API.Services
             return ToDto(order);
         }
 
+        public async Task<OrderResponseDto> CreateWalkInOrderAsync(CreateWalkInOrderDto dto)
+        {
+            if (dto.Items == null || dto.Items.Count == 0)
+                throw new InvalidOperationException("Add at least one item to the sale.");
+
+            var productIds = dto.Items.Select(i => i.ProductId).ToList();
+            var products = await _context.Products
+                .Where(p => productIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id);
+
+            decimal total = 0;
+            var itemsToCreate = new List<OrderItem>();
+
+            foreach (var item in dto.Items)
+            {
+                if (!products.TryGetValue(item.ProductId, out var product))
+                    throw new InvalidOperationException($"Product #{item.ProductId} no longer exists.");
+
+                if (item.Quantity < 1)
+                    throw new InvalidOperationException($"Invalid quantity for \"{product.Name}\".");
+
+                if (product.StockQuantity < item.Quantity)
+                    throw new InvalidOperationException($"Only {product.StockQuantity} of \"{product.Name}\" left in stock.");
+
+                total += product.Price * item.Quantity;
+
+                itemsToCreate.Add(new OrderItem
+                {
+                    ProductId = product.Id,
+                    ProductName = product.Name,
+                    Price = product.Price,
+                    Quantity = item.Quantity,
+                });
+
+                product.StockQuantity -= item.Quantity;
+            }
+
+            var order = new Order
+            {
+                CustomerName = string.IsNullOrWhiteSpace(dto.CustomerName) ? "Walk-in Customer" : dto.CustomerName,
+                CustomerEmail = dto.CustomerEmail ?? string.Empty,
+                Notes = dto.Notes,
+                Status = "Paid", // cash already received — no bank transfer to wait on
+                Channel = "Walk-in",
+                DeliveryMethod = null,
+                DeliveryFee = 0.00m,
+                Total = total,
+                Items = itemsToCreate,
+            };
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+
+                _context.Orders.Add(order);
+                await _context.SaveChangesAsync();
+
+                order.InvoiceNumber = $"INV-{order.Id:D6}";
+                await _context.SaveChangesAsync();
+
+                await transaction.CommitAsync();
+            });
+
+            // Only send a receipt if the customer actually gave an email — many walk-in
+            // customers won't. No owner-notification email either; the owner is the one
+            // entering this themselves, so it'd just be noise.
+            if (!string.IsNullOrWhiteSpace(order.CustomerEmail))
+            {
+                try
+                {
+                    await _emailService.SendOrderConfirmationEmailAsync(order);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send walk-in receipt email for order {OrderId}", order.Id);
+                }
+            }
+
+            return ToDto(order);
+        }
+
         public async Task<(OrderResponseDto? Order, string? Error)> UpdateStatusAsync(int id, string status)
         {
             if (!ValidStatuses.Contains(status))
@@ -237,6 +319,7 @@ namespace PinoyPantry.API.Services
             DeliveryMethod = order.DeliveryMethod,
             DeliveryFee = order.DeliveryFee,
             Status = order.Status,
+            Channel = order.Channel,
             Total = order.Total,
             CreatedAt = order.CreatedAt,
             Items = order.Items.Select(i => new OrderItemResponseDto

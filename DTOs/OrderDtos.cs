@@ -17,6 +17,17 @@ namespace PinoyPantry.API.DTOs
         public int Quantity { get; set; }
     }
 
+    // Admin-only: records an in-person cash sale (e.g. a friend buying directly from the
+    // owner). Already paid, so no delivery method / bank transfer flow applies. Customer
+    // details are optional — some walk-in customers won't want to give any.
+    public class CreateWalkInOrderDto
+    {
+        public string? CustomerName { get; set; }
+        public string? CustomerEmail { get; set; }
+        public string? Notes { get; set; }
+        public List<OrderItemRequestDto> Items { get; set; } = new();
+    }
+
     public class OrderResponseDto
     {
         public int Id { get; set; }
@@ -29,6 +40,7 @@ namespace PinoyPantry.API.DTOs
         public string? DeliveryMethod { get; set; }
         public decimal? DeliveryFee { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string Channel { get; set; } = "Online";
         public decimal Total { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<OrderItemResponseDto> Items { get; set; } = new();

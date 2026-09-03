@@ -27,6 +27,10 @@ namespace PinoyPantry.API.Models
         // Cancelled/Completed — enforced in OrderService, not at the DB level.
         public string Status { get; set; } = "Pending";
 
+        // "Online" (public checkout, awaits bank transfer) or "Walk-in" (admin-entered
+        // in-person cash sale, already paid). Distinguishes the two in reporting/UI.
+        public string Channel { get; set; } = "Online";
+
         [Column(TypeName = "decimal(18,2)")]
         public decimal Total { get; set; }
 
