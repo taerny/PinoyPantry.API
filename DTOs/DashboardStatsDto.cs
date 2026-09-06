@@ -6,7 +6,8 @@ public class DashboardStatsDto
     public int TotalUsers { get; set; }
     public int ProductsWithImages { get; set; }
     public int TotalCategories { get; set; }
-    public decimal TotalInventoryValue { get; set; }
+    public decimal TotalCostValue { get; set; }
+    public decimal TotalProfitValue { get; set; }
     public List<CategoryStatDto> CategoryStats { get; set; } = new();
     public List<RecentProductDto> RecentProducts { get; set; } = new();
 }

@@ -132,7 +132,8 @@ public class AuthService : IAuthService
             TotalUsers = userCount,
             ProductsWithImages = products.Count(p => !string.IsNullOrEmpty(p.ImageUrl)),
             TotalCategories = categoryStats.Count,
-            TotalInventoryValue = products.Sum(p => p.Price * p.StockQuantity),
+            TotalCostValue = products.Sum(p => p.CostPrice * p.StockQuantity),
+            TotalProfitValue = products.Sum(p => (p.Price - p.CostPrice) * p.StockQuantity),
             CategoryStats = categoryStats,
             RecentProducts = recentProducts
         };
