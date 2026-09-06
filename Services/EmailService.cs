@@ -307,6 +307,8 @@ public class EmailService : IEmailService
         string intro, Order order, string extraBlocks, string footer)
     {
         const string fontStack = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
+        const string beige = "#F5F5DC";
+        const string logoUrl = "https://pinoypantry.co.nz/images/logo.png";
         var sb = new StringBuilder();
         var placedAt = order.CreatedAt.ToString("d MMM yyyy, h:mm tt") + " UTC";
 
@@ -314,8 +316,8 @@ public class EmailService : IEmailService
             <!DOCTYPE html>
             <html lang="en">
             <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-            <body style="margin:0; padding:0; background:#F3F4F6; font-family: {fontStack};">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4F6; padding:32px 16px;">
+            <body style="margin:0; padding:0; background:{beige}; font-family: {fontStack};">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:{beige}; padding:32px 16px;">
             <tr><td align="center">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background:#FFFFFF; border-radius:12px; overflow:hidden; border:1px solid #E5E7EB;">
 
@@ -324,14 +326,13 @@ public class EmailService : IEmailService
               </tr>
 
               <tr>
-                <td style="padding:28px 32px 0;">
+                <td style="background:{beige}; padding:24px 32px;">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                     <tr>
-                      <td style="vertical-align:top;">
-                        <p style="margin:0; color:#D32F2F; font-size:22px; font-weight:700;">PinoyPantry</p>
-                        <p style="margin:4px 0 0; color:#6B7280; font-size:15px;">Filipino grocery store</p>
+                      <td style="vertical-align:middle;">
+                        <img src="{logoUrl}" alt="PinoyPantry" height="48" style="display:block; height:48px; width:auto; border:0;" />
                       </td>
-                      <td style="vertical-align:top; text-align:right;">
+                      <td style="vertical-align:middle; text-align:right;">
                         <p style="margin:0; color:#3E2723; font-size:15px; font-weight:600;">Invoice {order.InvoiceNumber}</p>
                         <p style="margin:4px 0 0; color:#6B7280; font-size:15px;">Placed {placedAt}</p>
                       </td>
@@ -417,7 +418,7 @@ public class EmailService : IEmailService
               </tr>
 
               <tr>
-                <td style="padding:20px 32px; background:#F9FAFB; border-top:1px solid #E5E7EB; text-align:center;">
+                <td style="padding:20px 32px; background:{beige}; border-top:1px solid #E5E7EB; text-align:center;">
                   <p style="margin:0; font-size:13px; color:#9CA3AF;">{footer}</p>
                 </td>
               </tr>
