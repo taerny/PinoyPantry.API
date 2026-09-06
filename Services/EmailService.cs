@@ -161,6 +161,91 @@ public class EmailService : IEmailService
         await client.SendMailAsync(mail);
     }
 
+    public async Task SendWalkInReceiptEmailAsync(Order order)
+    {
+        using var client = BuildSmtpClient(out var smtpUser, out _);
+
+        var isPaid = order.Status == "Paid";
+        var extraBlocks = isPaid
+            ? ""
+            : $"""
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(249,168,37,0.12); border:1px solid rgba(249,168,37,0.4); border-radius:8px; margin-bottom:8px;">
+                  <tr><td style="padding:14px 16px; font-size:13px; color:#5a4200;">
+                    <strong>Pay later:</strong> please settle <strong>${order.Total:F2}</strong> in-store on your next visit. Use <strong>{order.InvoiceNumber}</strong> as your reference.
+                  </td></tr>
+                </table>
+                """;
+
+        var mail = new MailMessage
+        {
+            From = new MailAddress(smtpUser, "PinoyPantry"),
+            Subject = isPaid ? $"Receipt — {order.InvoiceNumber}" : $"Receipt (payment pending) — {order.InvoiceNumber}",
+            Body = BuildOrderEmailHtml(
+                bannerText: isPaid ? "✅ Thank you for your purchase!" : "🙏 Thanks for shopping with us",
+                bannerColor: "#F9A825",
+                bannerTextColor: "#3E2723",
+                intro: isPaid
+                    ? $"Hi {order.CustomerName}, thank you for shopping with us in-store. Here's your receipt for your records."
+                    : $"Hi {order.CustomerName}, thanks for shopping with us in-store. Here's a summary of what you picked up.",
+                order: order,
+                extraBlocks: extraBlocks,
+                footer: "Maraming salamat — thank you for shopping with PinoyPantry!"
+            ),
+            IsBodyHtml = true
+        };
+
+        mail.To.Add(order.CustomerEmail);
+        await client.SendMailAsync(mail);
+    }
+
+    public async Task SendWalkInOwnerNotificationEmailAsync(Order order)
+    {
+        using var client = BuildSmtpClient(out var smtpUser, out var toAddress);
+
+        var isPaid = order.Status == "Paid";
+        var statusBlock = isPaid
+            ? """
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(46,125,50,0.1); border:1px solid rgba(46,125,50,0.4); border-radius:8px; margin-bottom:8px;">
+                  <tr><td style="padding:14px 16px; font-size:13px; color:#1b5e20;">
+                    <strong>Status: Paid</strong> — this sale has already been settled in-store.
+                  </td></tr>
+                </table>
+                """
+            : $"""
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(211,47,47,0.1); border:1px solid rgba(211,47,47,0.4); border-radius:8px; margin-bottom:8px;">
+                  <tr><td style="padding:14px 16px; font-size:13px; color:#7f1d1d;">
+                    <strong>Status: Pending</strong> — customer chose to pay later. Mark this order as Paid in the admin panel once they've settled ${order.Total:F2}.
+                  </td></tr>
+                </table>
+                """;
+
+        var intro = string.IsNullOrWhiteSpace(order.CustomerEmail)
+            ? $"""<strong>Customer:</strong> {WebUtility.HtmlEncode(order.CustomerName)} <span style="color:#6D4C41;">(no email on file)</span><br/>"""
+            : $"""<strong>Customer:</strong> {WebUtility.HtmlEncode(order.CustomerName)}<br/><strong>Email:</strong> <a href="mailto:{order.CustomerEmail}" style="color:#3E2723;">{order.CustomerEmail}</a><br/>""";
+
+        if (!string.IsNullOrWhiteSpace(order.Notes))
+            intro += $"""<strong>Notes:</strong> {WebUtilityEncode(order.Notes)}<br/>""";
+
+        var mail = new MailMessage
+        {
+            From = new MailAddress(smtpUser, "PinoyPantry Website"),
+            Subject = $"Walk-in sale recorded — {order.InvoiceNumber}",
+            Body = BuildOrderEmailHtml(
+                bannerText: "🛍️ Walk-in sale recorded",
+                bannerColor: "#D32F2F",
+                bannerTextColor: "#FFFFFF",
+                intro: intro,
+                order: order,
+                extraBlocks: statusBlock,
+                footer: "Automated notification from the PinoyPantry order system."
+            ),
+            IsBodyHtml = true
+        };
+
+        AddRecipients(mail.To, toAddress);
+        await client.SendMailAsync(mail);
+    }
+
     // Email:ToAddress may hold one or several comma-separated addresses (e.g. the
     // owner and a business partner both getting order notifications).
     private static void AddRecipients(MailAddressCollection recipients, string addresses)
@@ -287,10 +372,15 @@ public class EmailService : IEmailService
                       <td style="padding:6px 12px 0; font-size:16px; font-weight:bold; text-align:right; color:#D32F2F;">${order.Total:F2}{totalSuffix}</td>
                     </tr>
                   </table>
-
-                  <p style="margin:0 0 2px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#D32F2F; font-weight:bold;">Delivery method</p>
-                  <p style="margin:0 0 20px; font-size:15px;">{order.DeliveryMethod ?? "—"}</p>
             """);
+
+        if (order.DeliveryMethod is not null)
+        {
+            sb.Append($"""
+                  <p style="margin:0 0 2px; font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#D32F2F; font-weight:bold;">Delivery method</p>
+                  <p style="margin:0 0 20px; font-size:15px;">{order.DeliveryMethod}</p>
+                """);
+        }
 
         if (!string.IsNullOrWhiteSpace(order.CustomerAddress))
         {

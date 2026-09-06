@@ -9,4 +9,6 @@ public interface IEmailService
     Task SendOrderConfirmationEmailAsync(Order order);
     Task SendNewOrderNotificationEmailAsync(Order order);
     Task SendDeliveryFeeConfirmedEmailAsync(Order order);
+    Task SendWalkInReceiptEmailAsync(Order order);
+    Task SendWalkInOwnerNotificationEmailAsync(Order order);
 }

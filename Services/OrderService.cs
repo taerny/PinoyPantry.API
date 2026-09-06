@@ -223,14 +223,24 @@ namespace PinoyPantry.API.Services
                 await transaction.CommitAsync();
             });
 
-            // Only send a receipt if the customer actually gave an email — many walk-in
-            // customers won't. No owner-notification email either; the owner is the one
-            // entering this themselves, so it'd just be noise.
+            // Owner always gets notified so there's an email trail alongside the admin
+            // panel, showing whether it was paid on the spot or the customer is paying
+            // later. Customer only gets a receipt if they gave an email — many walk-in
+            // customers won't.
+            try
+            {
+                await _emailService.SendWalkInOwnerNotificationEmailAsync(order);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send walk-in owner notification email for order {OrderId}", order.Id);
+            }
+
             if (!string.IsNullOrWhiteSpace(order.CustomerEmail))
             {
                 try
                 {
-                    await _emailService.SendOrderConfirmationEmailAsync(order);
+                    await _emailService.SendWalkInReceiptEmailAsync(order);
                 }
                 catch (Exception ex)
                 {
