@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using PinoyPantry.API.Models;
 
 namespace PinoyPantry.API.Data
@@ -21,6 +22,29 @@ namespace PinoyPantry.API.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+
+            // SQL Server's datetime2 has no timezone concept — every value we store is UTC
+            // (DateTime.UtcNow), but EF Core reads it back with Kind=Unspecified. Without this,
+            // System.Text.Json serializes it with no "Z"/offset, so the browser's `new Date(...)`
+            // treats it as local time instead of UTC and displays the wrong day/time (this is
+            // what caused walk-in order timestamps to look several hours off in NZ).
+            var utcDateTimeConverter = new ValueConverter<DateTime, DateTime>(
+                v => v,
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+            var utcNullableDateTimeConverter = new ValueConverter<DateTime?, DateTime?>(
+                v => v,
+                v => v.HasValue ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc) : v);
+
+            foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+            {
+                foreach (var property in entityType.GetProperties())
+                {
+                    if (property.ClrType == typeof(DateTime))
+                        property.SetValueConverter(utcDateTimeConverter);
+                    else if (property.ClrType == typeof(DateTime?))
+                        property.SetValueConverter(utcNullableDateTimeConverter);
+                }
+            }
 
             modelBuilder.Entity<Order>()
                 .HasIndex(o => o.InvoiceNumber)

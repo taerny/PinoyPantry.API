@@ -259,7 +259,7 @@ namespace PinoyPantry.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("BankDetails");
+                    b.ToTable("BankDetails", (string)null);
                 });
 
             modelBuilder.Entity("PinoyPantry.API.Models.HeroContent", b =>
@@ -314,7 +314,7 @@ namespace PinoyPantry.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("HeroContents");
+                    b.ToTable("HeroContents", (string)null);
 
                     b.HasData(
                         new
@@ -354,7 +354,7 @@ namespace PinoyPantry.API.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
-                    b.ToTable("NewsletterSubscribers");
+                    b.ToTable("NewsletterSubscribers", (string)null);
                 });
 
             modelBuilder.Entity("PinoyPantry.API.Models.Order", b =>
@@ -411,7 +411,7 @@ namespace PinoyPantry.API.Migrations
                         .IsUnique()
                         .HasFilter("[InvoiceNumber] IS NOT NULL");
 
-                    b.ToTable("Orders");
+                    b.ToTable("Orders", (string)null);
                 });
 
             modelBuilder.Entity("PinoyPantry.API.Models.OrderItem", b =>
@@ -442,7 +442,7 @@ namespace PinoyPantry.API.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("OrderItems");
+                    b.ToTable("OrderItems", (string)null);
                 });
 
             modelBuilder.Entity("PinoyPantry.API.Models.PasabuyOrder", b =>
@@ -479,7 +479,7 @@ namespace PinoyPantry.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("PasabuyOrders");
+                    b.ToTable("PasabuyOrders", (string)null);
                 });
 
             modelBuilder.Entity("PinoyPantry.API.Models.Product", b =>
@@ -538,7 +538,7 @@ namespace PinoyPantry.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
 
                     b.HasData(
                         new
