@@ -6,6 +6,7 @@ namespace PinoyPantry.API.Services;
 public interface IEmailService
 {
     Task SendContactEmailAsync(ContactRequestDto dto);
+    Task SendNewPasabuyOrderNotificationAsync(PasabuyOrder order);
     Task SendOrderConfirmationEmailAsync(Order order);
     Task SendNewOrderNotificationEmailAsync(Order order);
     Task SendDeliveryFeeConfirmedEmailAsync(Order order);

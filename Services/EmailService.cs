@@ -248,6 +248,40 @@ public class EmailService : IEmailService
         await client.SendMailAsync(mail);
     }
 
+    public async Task SendNewPasabuyOrderNotificationAsync(PasabuyOrder order)
+    {
+        using var client = BuildSmtpClient(out var smtpUser, out var toAddress);
+
+        var mail = new MailMessage
+        {
+            From = new MailAddress(smtpUser, "PinoyPantry Website"),
+            Subject = $"[Pasabuy] New order request — from {order.Name}",
+            Body = $"""
+                New Pasabuy order request submitted on the website:
+
+                Name:  {order.Name}
+                Phone: {order.Phone}
+                Email: {order.Email ?? "(not given)"}
+
+                Items requested:
+                {order.ItemsRequested}
+
+                Notes:
+                {(string.IsNullOrWhiteSpace(order.Notes) ? "(none)" : order.Notes)}
+
+                ---
+                View and manage this in the admin panel under Pasabuy.
+                """,
+            IsBodyHtml = false
+        };
+
+        AddRecipients(mail.To, toAddress);
+        if (!string.IsNullOrWhiteSpace(order.Email))
+            mail.ReplyToList.Add(new MailAddress(order.Email, order.Name));
+
+        await client.SendMailAsync(mail);
+    }
+
     // Email:ToAddress may hold one or several comma-separated addresses (e.g. the
     // owner and a business partner both getting order notifications).
     private static void AddRecipients(MailAddressCollection recipients, string addresses)
