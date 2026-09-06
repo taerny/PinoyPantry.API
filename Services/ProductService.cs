@@ -38,6 +38,7 @@ namespace PinoyPantry.API.Services
         public async Task<ProductResponseDto> CreateProductAsync(CreateProductDto productDto)
         {
             var product = _mapper.Map<Product>(productDto);
+            ApplyPricingCalculations(product);
             var createdProduct = await _productRepository.CreateProductAsync(product);
             return _mapper.Map<ProductResponseDto>(createdProduct);
         }
@@ -49,9 +50,23 @@ namespace PinoyPantry.API.Services
                 return null;
 
             _mapper.Map(productDto, existing);
+            ApplyPricingCalculations(existing);
             var updated = await _productRepository.UpdateProductAsync(id, existing);
 
             return updated == null ? null : _mapper.Map<ProductResponseDto>(updated);
+        }
+
+        // CostPrice is derived from Subtotal/Qty when both are present (locks it as invoice-
+        // derived); otherwise whatever CostPrice was set directly is kept (manual products with
+        // no supplier invoice line). RecommendedRetail is ALWAYS server-computed from the final
+        // CostPrice + Margin — never trusted from client input.
+        private static void ApplyPricingCalculations(Product product)
+        {
+            var derivedCost = PricingCalculator.UnitCost(product.Subtotal, product.PackQty);
+            if (derivedCost.HasValue)
+                product.CostPrice = derivedCost.Value;
+
+            product.RecommendedRetail = PricingCalculator.RecommendedPrice(product.CostPrice, product.Margin);
         }
 
         public async Task<bool> DeleteProductAsync(int id)

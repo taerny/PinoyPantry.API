@@ -114,5 +114,26 @@ namespace PinoyPantry.API.Repositories
             await _context.SaveChangesAsync();
             return list.Count;
         }
+
+        public async Task<List<Product>> GetAllRawAsync()
+        {
+            return await _context.Products.AsNoTracking().ToListAsync();
+        }
+
+        // Updates only Cost Price, Recommended Retail, and Margin — never Price/Stock/
+        // Category/Published, so a pricing correction can never silently change what
+        // customers see or buy.
+        public async Task<Product?> UpdatePricingAsync(int id, decimal costPrice, decimal? recommendedRetail, decimal? margin)
+        {
+            var product = await _context.Products.FindAsync(id);
+            if (product == null)
+                return null;
+
+            product.CostPrice = costPrice;
+            product.RecommendedRetail = recommendedRetail;
+            product.Margin = margin;
+            await _context.SaveChangesAsync();
+            return product;
+        }
     }
 }

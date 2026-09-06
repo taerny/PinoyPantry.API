@@ -17,8 +17,8 @@ namespace PinoyPantry.API.Services
         private static readonly string[] NameHeaders = { "name", "product", "productname", "title", "item" };
         private static readonly string[] CategoryHeaders = { "category", "cat" };
         private static readonly string[] StockHeaders = { "stockquantity", "quantity", "qty", "stock" };
-        private static readonly string[] CostHeaders = { "costprice", "costexgst", "cost", "wholesalecost", "unitcost" };
-        private static readonly string[] RecommendedRetailHeaders = { "recommendedretail", "rrp", "retailprice" };
+        private static readonly string[] CostHeaders = { "costprice", "costexgst", "cost", "wholesalecost", "unitcost", "costindividual" };
+        private static readonly string[] RecommendedRetailHeaders = { "recommendedretail", "rrp", "retailprice", "suggestedretail" };
         private static readonly string[] MarginHeaders = { "margin" };
         private static readonly string[] PublishedHeaders = { "ispublished", "published" };
 
