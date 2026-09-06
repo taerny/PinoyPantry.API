@@ -1,4 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PinoyPantry.API.DTOs;
+using PinoyPantry.API.Services;
 
 namespace PinoyPantry.API.Controllers;
 
@@ -6,23 +9,25 @@ namespace PinoyPantry.API.Controllers;
 [Route("api/bank-details")]
 public class BankDetailsController : ControllerBase
 {
-    private readonly IConfiguration _configuration;
+    private readonly IBankDetailsService _bankDetailsService;
 
-    public BankDetailsController(IConfiguration configuration)
+    public BankDetailsController(IBankDetailsService bankDetailsService)
     {
-        _configuration = configuration;
+        _bankDetailsService = bankDetailsService;
     }
 
-    // GET: api/bank-details — public, used on the invoice page for payment instructions
+    // GET: api/bank-details — public, used on checkout/invoices for payment instructions
     [HttpGet]
-    public IActionResult GetBankDetails()
+    public async Task<ActionResult<BankDetailsDto>> GetBankDetails()
     {
-        var section = _configuration.GetSection("BankTransfer");
-        return Ok(new
-        {
-            bankName = section["BankName"],
-            accountName = section["AccountName"],
-            accountNumber = section["AccountNumber"],
-        });
+        return Ok(await _bankDetailsService.GetBankDetailsAsync());
+    }
+
+    // PUT: api/bank-details — Admin only
+    [Authorize(Roles = "Admin")]
+    [HttpPut]
+    public async Task<ActionResult<BankDetailsDto>> UpdateBankDetails(BankDetailsDto dto)
+    {
+        return Ok(await _bankDetailsService.UpdateBankDetailsAsync(dto));
     }
 }

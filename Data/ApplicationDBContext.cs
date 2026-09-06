@@ -14,6 +14,7 @@ namespace PinoyPantry.API.Data
         public DbSet<HeroContent> HeroContents { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<BankDetails> BankDetails { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -9,10 +9,12 @@ namespace PinoyPantry.API.Services;
 public class EmailService : IEmailService
 {
     private readonly IConfiguration _config;
+    private readonly IBankDetailsService _bankDetailsService;
 
-    public EmailService(IConfiguration config)
+    public EmailService(IConfiguration config, IBankDetailsService bankDetailsService)
     {
         _config = config;
+        _bankDetailsService = bankDetailsService;
     }
 
     public async Task SendContactEmailAsync(ContactRequestDto dto)
@@ -63,7 +65,7 @@ public class EmailService : IEmailService
                 """);
         }
 
-        noticeBlocks.Append(BuildPaymentInstructionsBlock(order.InvoiceNumber));
+        noticeBlocks.Append(await BuildPaymentInstructionsBlock(order.InvoiceNumber));
 
         var mail = new MailMessage
         {
@@ -151,7 +153,7 @@ public class EmailService : IEmailService
                 bannerTextColor: "#3E2723",
                 intro: $"Hi {order.CustomerName}, we've arranged your delivery and confirmed the fee. Here's your updated total.",
                 order: order,
-                extraBlocks: BuildPaymentInstructionsBlock(order.InvoiceNumber, introText: "Please pay the total above by bank transfer using the details below."),
+                extraBlocks: await BuildPaymentInstructionsBlock(order.InvoiceNumber, introText: "Please pay the total above by bank transfer using the details below."),
                 footer: "Maraming salamat — thank you for shopping with PinoyPantry!"
             ),
             IsBodyHtml = true
@@ -273,11 +275,12 @@ public class EmailService : IEmailService
 
     private static string WebUtilityEncode(string s) => WebUtility.HtmlEncode(s).Replace("\n", "<br/>");
 
-    private string BuildPaymentInstructionsBlock(string? invoiceNumber, string introText = "Please pay by bank transfer using the details below.")
+    private async Task<string> BuildPaymentInstructionsBlock(string? invoiceNumber, string introText = "Please pay by bank transfer using the details below.")
     {
-        var bankName = _config["BankTransfer:BankName"];
-        var accountName = _config["BankTransfer:AccountName"];
-        var accountNumber = _config["BankTransfer:AccountNumber"];
+        var bank = await _bankDetailsService.GetBankDetailsAsync();
+        var bankName = bank.BankName;
+        var accountName = bank.AccountName;
+        var accountNumber = bank.AccountNumber;
 
         return $"""
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(249,168,37,0.12); border:1px solid rgba(249,168,37,0.4); border-radius:8px; margin-bottom:8px;">
