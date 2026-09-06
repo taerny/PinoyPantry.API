@@ -16,5 +16,6 @@ namespace PinoyPantry.API.Repositories
         Task<int> ImportProductsAsync(IEnumerable<Product> products);
         Task<List<Product>> GetAllRawAsync();
         Task<Product?> UpdatePricingAsync(int id, decimal costPrice, decimal? recommendedRetail, decimal? margin);
+        Task SetCodeAsync(int id, string code);
     }
 }

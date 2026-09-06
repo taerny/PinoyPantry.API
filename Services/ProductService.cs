@@ -40,6 +40,15 @@ namespace PinoyPantry.API.Services
             var product = _mapper.Map<Product>(productDto);
             ApplyPricingCalculations(product);
             var createdProduct = await _productRepository.CreateProductAsync(product);
+
+            // Products with no supplier invoice Code (added by hand, not from an invoice) get
+            // an internal one so the field is never blank — admin never types this themselves.
+            if (string.IsNullOrWhiteSpace(createdProduct.Code))
+            {
+                createdProduct.Code = $"PP-{createdProduct.Id:D6}";
+                await _productRepository.SetCodeAsync(createdProduct.Id, createdProduct.Code);
+            }
+
             return _mapper.Map<ProductResponseDto>(createdProduct);
         }
 

@@ -133,7 +133,10 @@ public class AuthService : IAuthService
             ProductsWithImages = products.Count(p => !string.IsNullOrEmpty(p.ImageUrl)),
             TotalCategories = categoryStats.Count,
             TotalCostValue = products.Sum(p => p.CostPrice * p.StockQuantity),
-            TotalProfitValue = products.Sum(p => (p.Price - p.CostPrice) * p.StockQuantity),
+            // Price is GST-inclusive (what the customer pays) — must remove GST before
+            // comparing against Cost, same as PricingCalculator.Breakdown used on the
+            // product edit form, otherwise this overstates profit by the GST portion.
+            TotalProfitValue = products.Sum(p => PricingCalculator.Breakdown(p.Price, p.CostPrice).ProfitAmount * p.StockQuantity),
             CategoryStats = categoryStats,
             RecentProducts = recentProducts
         };
