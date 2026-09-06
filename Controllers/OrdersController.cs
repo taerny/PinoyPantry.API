@@ -40,8 +40,8 @@ public class OrdersController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<OrderResponseDto>> CreateOrder(CreateOrderDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.CustomerName) || string.IsNullOrWhiteSpace(dto.CustomerEmail))
-            return BadRequest(new { message = "Name and email are required." });
+        if (string.IsNullOrWhiteSpace(dto.CustomerName) || string.IsNullOrWhiteSpace(dto.CustomerPhone))
+            return BadRequest(new { message = "Name and phone number are required." });
 
         try
         {

@@ -123,7 +123,7 @@ public class EmailService : IEmailService
                 bannerTextColor: "#FFFFFF",
                 intro: $"""
                     <strong>Customer:</strong> {WebUtility.HtmlEncode(order.CustomerName)}<br/>
-                    <strong>Email:</strong> <a href="mailto:{order.CustomerEmail}" style="color:#3E2723;">{order.CustomerEmail}</a><br/>
+                    {(string.IsNullOrWhiteSpace(order.CustomerEmail) ? "" : $"""<strong>Email:</strong> <a href="mailto:{order.CustomerEmail}" style="color:#3E2723;">{order.CustomerEmail}</a><br/>""")}
                     {(string.IsNullOrWhiteSpace(order.CustomerPhone) ? "" : $"""<strong>Phone:</strong> <a href="tel:{order.CustomerPhone}" style="color:#3E2723;">{order.CustomerPhone}</a><br/>""")}
                     {(string.IsNullOrWhiteSpace(order.CustomerAddress) ? "" : $"""<strong>Address:</strong> {WebUtilityEncode(order.CustomerAddress)}<br/>""")}
                     {(string.IsNullOrWhiteSpace(order.Notes) ? "" : $"""<strong>Notes:</strong> {WebUtilityEncode(order.Notes)}<br/>""")}

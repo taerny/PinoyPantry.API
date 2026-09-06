@@ -105,7 +105,7 @@ namespace PinoyPantry.API.Services
             var order = new Order
             {
                 CustomerName = dto.CustomerName,
-                CustomerEmail = dto.CustomerEmail,
+                CustomerEmail = dto.CustomerEmail ?? string.Empty,
                 CustomerPhone = dto.CustomerPhone,
                 CustomerAddress = dto.CustomerAddress,
                 Notes = dto.Notes,
@@ -137,14 +137,18 @@ namespace PinoyPantry.API.Services
             });
 
             // Order is already saved either way — a failed notification email shouldn't
-            // undo it or fail the request, just get logged.
-            try
+            // undo it or fail the request, just get logged. Email is optional now (phone
+            // is the required contact method), so only send if one was given.
+            if (!string.IsNullOrWhiteSpace(order.CustomerEmail))
             {
-                await _emailService.SendOrderConfirmationEmailAsync(order);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", order.Id);
+                try
+                {
+                    await _emailService.SendOrderConfirmationEmailAsync(order);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send order confirmation email for order {OrderId}", order.Id);
+                }
             }
 
             try
@@ -305,13 +309,16 @@ namespace PinoyPantry.API.Services
             order.Total = itemsTotal + deliveryFee;
             await _context.SaveChangesAsync();
 
-            try
+            if (!string.IsNullOrWhiteSpace(order.CustomerEmail))
             {
-                await _emailService.SendDeliveryFeeConfirmedEmailAsync(order);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to send delivery fee confirmation email for order {OrderId}", order.Id);
+                try
+                {
+                    await _emailService.SendDeliveryFeeConfirmedEmailAsync(order);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send delivery fee confirmation email for order {OrderId}", order.Id);
+                }
             }
 
             return (ToDto(order), null);
