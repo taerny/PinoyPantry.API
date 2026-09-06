@@ -15,6 +15,7 @@ namespace PinoyPantry.API.Data
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<BankDetails> BankDetails { get; set; }
+        public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -22,6 +23,10 @@ namespace PinoyPantry.API.Data
 
             modelBuilder.Entity<Order>()
                 .HasIndex(o => o.InvoiceNumber)
+                .IsUnique();
+
+            modelBuilder.Entity<NewsletterSubscriber>()
+                .HasIndex(s => s.Email)
                 .IsUnique();
 
             modelBuilder.Entity<Order>()
