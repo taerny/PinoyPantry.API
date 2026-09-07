@@ -10,10 +10,12 @@ namespace PinoyPantry.API.Controllers
     public class ProductsController : ControllerBase
     {
         private readonly IProductService _productService;
+        private readonly IProductBatchService _productBatchService;
 
-        public ProductsController(IProductService productService)
+        public ProductsController(IProductService productService, IProductBatchService productBatchService)
         {
             _productService = productService;
+            _productBatchService = productBatchService;
         }
 
         // GET: api/products?page=1&limit=12&category=snacks&search=vinegar
@@ -133,6 +135,53 @@ namespace PinoyPantry.API.Controllers
                 return BadRequest(new { message = "No rows found — check the file has Name, Category, StockQuantity, CostPrice, Price columns (or common supplier-sheet equivalents)." });
 
             return Ok(rows);
+        }
+
+        // GET: api/products/5/batches — Admin only. Lists a product's batches (oldest/next-
+        // to-sell first) plus a suggested next batch number for the "add batch" form.
+        [Authorize(Roles = "Admin")]
+        [HttpGet("{productId}/batches")]
+        public async Task<ActionResult<ProductBatchListResponseDto>> GetBatches(int productId)
+        {
+            var result = await _productBatchService.GetBatchesAsync(productId);
+            if (result == null)
+                return NotFound(new { message = $"Product {productId} not found." });
+
+            return Ok(result);
+        }
+
+        // POST: api/products/5/batches — Admin only. Adds a new batch and increases the
+        // product's stock by the batch quantity.
+        [Authorize(Roles = "Admin")]
+        [HttpPost("{productId}/batches")]
+        public async Task<ActionResult<ProductBatchDto>> CreateBatch(int productId, CreateProductBatchDto dto)
+        {
+            var (batch, error) = await _productBatchService.CreateBatchAsync(productId, dto);
+
+            if (batch == null && error == null)
+                return NotFound(new { message = $"Product {productId} not found." });
+
+            if (error != null)
+                return BadRequest(new { message = error });
+
+            return CreatedAtAction(nameof(GetBatches), new { productId }, batch);
+        }
+
+        // DELETE: api/products/5/batches/3 — Admin only. Removes only the batch's still-
+        // remaining (unsold) units from the product's stock; units already sold stay sold.
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{productId}/batches/{batchId}")]
+        public async Task<ActionResult> DeleteBatch(int productId, int batchId)
+        {
+            var result = await _productBatchService.DeleteBatchAsync(productId, batchId);
+
+            if (result == null)
+                return NotFound(new { message = $"Product {productId} not found." });
+
+            if (result == false)
+                return NotFound(new { message = $"Batch {batchId} not found for this product." });
+
+            return NoContent();
         }
     }
 }

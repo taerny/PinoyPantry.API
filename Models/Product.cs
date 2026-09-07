@@ -40,5 +40,7 @@ namespace PinoyPantry.API.Models
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal? Subtotal { get; set; }
+
+        public List<ProductBatch> Batches { get; set; } = new();
     }
 }

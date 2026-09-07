@@ -18,6 +18,7 @@ namespace PinoyPantry.API.Data
         public DbSet<BankDetails> BankDetails { get; set; }
         public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
         public DbSet<PasabuyOrder> PasabuyOrders { get; set; }
+        public DbSet<ProductBatch> ProductBatches { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -53,6 +54,16 @@ namespace PinoyPantry.API.Data
             modelBuilder.Entity<NewsletterSubscriber>()
                 .HasIndex(s => s.Email)
                 .IsUnique();
+
+            modelBuilder.Entity<ProductBatch>()
+                .HasIndex(b => new { b.ProductId, b.BatchNumber })
+                .IsUnique();
+
+            modelBuilder.Entity<ProductBatch>()
+                .HasOne(b => b.Product)
+                .WithMany(p => p.Batches)
+                .HasForeignKey(b => b.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Order>()
                 .HasMany(o => o.Items)

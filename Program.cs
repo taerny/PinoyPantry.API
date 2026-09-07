@@ -73,6 +73,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IBankDetailsService, BankDetailsService>();
+builder.Services.AddScoped<IBatchStockService, BatchStockService>();
+builder.Services.AddScoped<IProductBatchService, ProductBatchService>();
 
 // Azure Blob Storage
 builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();

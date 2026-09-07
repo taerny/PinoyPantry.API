@@ -20,12 +20,14 @@ namespace PinoyPantry.API.Services
 
         private readonly ApplicationDBContext _context;
         private readonly IEmailService _emailService;
+        private readonly IBatchStockService _batchStockService;
         private readonly ILogger<OrderService> _logger;
 
-        public OrderService(ApplicationDBContext context, IEmailService emailService, ILogger<OrderService> logger)
+        public OrderService(ApplicationDBContext context, IEmailService emailService, IBatchStockService batchStockService, ILogger<OrderService> logger)
         {
             _context = context;
             _emailService = emailService;
+            _batchStockService = batchStockService;
             _logger = logger;
         }
 
@@ -89,7 +91,7 @@ namespace PinoyPantry.API.Services
                     Quantity = item.Quantity,
                 });
 
-                product.StockQuantity -= item.Quantity;
+                await _batchStockService.DeductAsync(product, item.Quantity);
             }
 
             // Delivery within Dunedin is a fixed fee; outside Dunedin is null ("to be
@@ -197,7 +199,7 @@ namespace PinoyPantry.API.Services
                     Quantity = item.Quantity,
                 });
 
-                product.StockQuantity -= item.Quantity;
+                await _batchStockService.DeductAsync(product, item.Quantity);
             }
 
             var order = new Order
@@ -279,7 +281,7 @@ namespace PinoyPantry.API.Services
                 {
                     var product = await _context.Products.FindAsync(item.ProductId);
                     if (product != null)
-                        product.StockQuantity += item.Quantity;
+                        await _batchStockService.RestockAsync(product, item.Quantity);
                 }
             }
 
