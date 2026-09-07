@@ -17,5 +17,10 @@ namespace PinoyPantry.API.Repositories
         Task<List<Product>> GetAllRawAsync();
         Task<Product?> UpdatePricingAsync(int id, decimal costPrice, decimal? recommendedRetail, decimal? margin);
         Task SetCodeAsync(int id, string code);
+
+        // Creates "Batch 1" for a freshly-imported product and sets its StockQuantity to
+        // match — the equivalent of what the AddProductBatches migration did to backfill
+        // products that already existed before batch tracking began.
+        Task CreateInitialBatchAsync(int productId, int quantity);
     }
 }

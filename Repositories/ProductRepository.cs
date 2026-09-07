@@ -145,5 +145,22 @@ namespace PinoyPantry.API.Repositories
                 await _context.SaveChangesAsync();
             }
         }
+
+        public async Task CreateInitialBatchAsync(int productId, int quantity)
+        {
+            var product = await _context.Products.FindAsync(productId);
+            if (product == null || quantity <= 0) return;
+
+            _context.ProductBatches.Add(new ProductBatch
+            {
+                ProductId = productId,
+                BatchNumber = "1",
+                Quantity = quantity,
+                RemainingQuantity = quantity,
+            });
+            product.StockQuantity = quantity;
+
+            await _context.SaveChangesAsync();
+        }
     }
 }

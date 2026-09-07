@@ -119,8 +119,19 @@ namespace PinoyPantry.API.Services
 
         public async Task<int> ImportProductsAsync(IEnumerable<ImportProductDto> products)
         {
-            var entities = _mapper.Map<IEnumerable<Product>>(products);
-            return await _productRepository.ImportProductsAsync(entities);
+            var dtoList = products.ToList();
+            var entities = _mapper.Map<List<Product>>(dtoList); // StockQuantity ignored — starts at 0
+            var imported = await _productRepository.ImportProductsAsync(entities);
+
+            // Each imported row's quantity becomes that product's initial batch, same as how
+            // existing live products were backfilled with "Batch 1" when tracking began.
+            for (var i = 0; i < entities.Count; i++)
+            {
+                if (dtoList[i].StockQuantity > 0)
+                    await _productRepository.CreateInitialBatchAsync(entities[i].Id, dtoList[i].StockQuantity);
+            }
+
+            return imported;
         }
     }
 }

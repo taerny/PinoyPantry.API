@@ -19,9 +19,6 @@ namespace PinoyPantry.API.Validators
 
             RuleFor(x => x.Category)
                 .NotEmpty().WithMessage("Category is required.");
-
-            RuleFor(x => x.StockQuantity)
-                .GreaterThanOrEqualTo(0).WithMessage("Stock quantity cannot be negative.");
         }
     }
 }

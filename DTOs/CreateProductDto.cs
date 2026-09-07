@@ -10,7 +10,9 @@ namespace PinoyPantry.API.DTOs
         public decimal CostPrice { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
-        public int StockQuantity { get; set; }
+
+        // Stock is intentionally not accepted here — it starts at 0 and is only ever set by
+        // adding a batch afterward (see ProductBatchService), matching Sugbodelights' approach.
         public bool IsPublished { get; set; } = false;
 
         // Pure profit margin (fraction, e.g. 0.20 = 20%), GST-exclusive — drives the

@@ -17,7 +17,12 @@ namespace PinoyPantry.API.Mappings
                 .ForMember(dest => dest.GstRate, opt => opt.MapFrom(src => PricingCalculator.GstRate));
             CreateMap<CreateProductDto, Product>();
             CreateMap<UpdateProductDto, Product>();
-            CreateMap<ImportProductDto, Product>();
+
+            // StockQuantity on the DTO represents the quantity being received in this import —
+            // it becomes the product's initial batch (see ProductService.ImportProductsAsync),
+            // not a direct write to Product.StockQuantity.
+            CreateMap<ImportProductDto, Product>()
+                .ForMember(dest => dest.StockQuantity, opt => opt.Ignore());
         }
     }
 }
