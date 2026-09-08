@@ -25,6 +25,12 @@ namespace PinoyPantry.API.DTOs
 
         public decimal? Subtotal { get; set; }
 
+        // Cost of the most recently added batch, regardless of whether it's the one currently
+        // selling — a heads-up for when it differs from CostPrice (the active-selling batch's
+        // cost), so the admin can see a price change coming before the current stock even
+        // sells out. Null if there's only one batch (or none).
+        public decimal? LatestBatchCostPrice { get; set; }
+
         // Breakdown of the ACTUAL store Price (not RecommendedRetail) — reflects any manual
         // rounding the admin has applied.
         public decimal ProfitAmount { get; set; }

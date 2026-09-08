@@ -7,6 +7,11 @@ public class DashboardStatsDto
     public int ProductsWithImages { get; set; }
     public int TotalCategories { get; set; }
     public decimal TotalCostValue { get; set; }
+
+    // Sum of every batch's Subtotal ever added, across every product — includes stock that's
+    // already sold, unlike TotalCostValue above which only reflects what's currently on hand.
+    public decimal TotalInventoryInvested { get; set; }
+
     public decimal TotalProfitValue { get; set; }
     public List<CategoryStatDto> CategoryStats { get; set; } = new();
     public List<RecentProductDto> RecentProducts { get; set; } = new();

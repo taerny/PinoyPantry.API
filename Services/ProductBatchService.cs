@@ -8,10 +8,12 @@ namespace PinoyPantry.API.Services
     public class ProductBatchService : IProductBatchService
     {
         private readonly ApplicationDBContext _context;
+        private readonly IBatchStockService _batchStockService;
 
-        public ProductBatchService(ApplicationDBContext context)
+        public ProductBatchService(ApplicationDBContext context, IBatchStockService batchStockService)
         {
             _context = context;
+            _batchStockService = batchStockService;
         }
 
         public async Task<ProductBatchListResponseDto?> GetBatchesAsync(int productId)
@@ -54,6 +56,9 @@ namespace PinoyPantry.API.Services
             if (dto.Quantity < 1)
                 return (null, "Quantity must be at least 1.");
 
+            if (dto.CostPrice < 0)
+                return (null, "Cost price cannot be negative.");
+
             var duplicate = await _context.ProductBatches
                 .AnyAsync(b => b.ProductId == productId && b.BatchNumber == dto.BatchNumber);
             if (duplicate)
@@ -65,11 +70,16 @@ namespace PinoyPantry.API.Services
                 BatchNumber = dto.BatchNumber,
                 Quantity = dto.Quantity,
                 RemainingQuantity = dto.Quantity,
+                CostPrice = dto.CostPrice,
+                Subtotal = dto.CostPrice * dto.Quantity,
                 BestBefore = dto.BestBefore,
             };
 
             _context.ProductBatches.Add(batch);
             product.StockQuantity += dto.Quantity;
+            await _context.SaveChangesAsync(); // batch needs an Id before it can be "the active one"
+
+            await _batchStockService.SyncProductCostAsync(product);
             await _context.SaveChangesAsync();
 
             return (ToDto(batch), null);
@@ -90,6 +100,9 @@ namespace PinoyPantry.API.Services
             _context.ProductBatches.Remove(batch);
             await _context.SaveChangesAsync();
 
+            await _batchStockService.SyncProductCostAsync(product);
+            await _context.SaveChangesAsync();
+
             return true;
         }
 
@@ -99,6 +112,8 @@ namespace PinoyPantry.API.Services
             BatchNumber = batch.BatchNumber,
             Quantity = batch.Quantity,
             RemainingQuantity = batch.RemainingQuantity,
+            CostPrice = batch.CostPrice,
+            Subtotal = batch.Subtotal,
             BestBefore = batch.BestBefore,
             CreatedAt = batch.CreatedAt,
         };

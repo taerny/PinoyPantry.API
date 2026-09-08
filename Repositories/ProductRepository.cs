@@ -18,6 +18,11 @@ namespace PinoyPantry.API.Repositories
         {
             var products = _context.Products.AsQueryable();
 
+            // Batches are only needed for the admin listing (LatestBatchCostPrice) — the public
+            // storefront listing has no use for them, so skip the extra join there.
+            if (query.IncludeUnpublished)
+                products = products.Include(p => p.Batches);
+
             if (!query.IncludeUnpublished)
                 products = products.Where(p => p.IsPublished);
 
@@ -134,6 +139,16 @@ namespace PinoyPantry.API.Repositories
             product.Margin = margin;
             await _context.SaveChangesAsync();
             return product;
+        }
+
+        public async Task<HashSet<string>> GetExistingCodesAsync(IEnumerable<string> codes)
+        {
+            var codeList = codes.ToList();
+            return (await _context.Products
+                .Where(p => p.Code != null && codeList.Contains(p.Code))
+                .Select(p => p.Code!)
+                .ToListAsync())
+                .ToHashSet();
         }
 
         public async Task SetCodeAsync(int id, string code)

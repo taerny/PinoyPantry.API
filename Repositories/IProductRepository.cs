@@ -22,5 +22,9 @@ namespace PinoyPantry.API.Repositories
         // match — the equivalent of what the AddProductBatches migration did to backfill
         // products that already existed before batch tracking began.
         Task CreateInitialBatchAsync(int productId, int quantity);
+
+        // Which of these codes already belong to an existing product — used by the PDF import
+        // preview to flag likely duplicates before the admin confirms anything.
+        Task<HashSet<string>> GetExistingCodesAsync(IEnumerable<string> codes);
     }
 }

@@ -22,14 +22,18 @@ namespace PinoyPantry.API.Services
         {
             var remaining = quantity;
 
+            // Fetch every batch (not just ones with stock left) — the active-cost check below
+            // needs the full, freshly-mutated picture; a filtered re-query after mutating would
+            // still see the old, unsaved RemainingQuantity values from the database.
             var batches = await _context.ProductBatches
-                .Where(b => b.ProductId == product.Id && b.RemainingQuantity > 0)
+                .Where(b => b.ProductId == product.Id)
                 .OrderBy(b => b.CreatedAt).ThenBy(b => b.Id)
                 .ToListAsync();
 
             foreach (var batch in batches)
             {
                 if (remaining <= 0) break;
+                if (batch.RemainingQuantity <= 0) continue;
 
                 var take = Math.Min(batch.RemainingQuantity, remaining);
                 batch.RemainingQuantity -= take;
@@ -40,6 +44,7 @@ namespace PinoyPantry.API.Services
             // with no batches yet) — batches are a best-effort breakdown of that total, not
             // the source of truth for it.
             product.StockQuantity -= quantity;
+            SyncProductCostFromBatches(product, batches);
         }
 
         public async Task RestockAsync(Product product, int quantity)
@@ -47,7 +52,7 @@ namespace PinoyPantry.API.Services
             var remaining = quantity;
 
             var batches = await _context.ProductBatches
-                .Where(b => b.ProductId == product.Id && b.RemainingQuantity < b.Quantity)
+                .Where(b => b.ProductId == product.Id)
                 .OrderBy(b => b.CreatedAt).ThenBy(b => b.Id)
                 .ToListAsync();
 
@@ -56,12 +61,55 @@ namespace PinoyPantry.API.Services
                 if (remaining <= 0) break;
 
                 var room = batch.Quantity - batch.RemainingQuantity;
+                if (room <= 0) continue;
+
                 var give = Math.Min(room, remaining);
                 batch.RemainingQuantity += give;
                 remaining -= give;
             }
 
             product.StockQuantity += quantity;
+            SyncProductCostFromBatches(product, batches);
+        }
+
+        public async Task SyncProductCostAsync(Product product)
+        {
+            // Safe to query fresh here — callers (ProductBatchService) save their batch
+            // changes before calling this, unlike Deduct/RestockAsync above which sync from
+            // their own in-memory list precisely to avoid reading stale unsaved state.
+            var activeBatch = await _context.ProductBatches
+                .Where(b => b.ProductId == product.Id && b.RemainingQuantity > 0)
+                .OrderBy(b => b.CreatedAt).ThenBy(b => b.Id)
+                .FirstOrDefaultAsync();
+
+            ApplyActiveBatchCost(product, activeBatch);
+        }
+
+        private static void SyncProductCostFromBatches(Product product, List<ProductBatch> batches)
+        {
+            var activeBatch = batches.FirstOrDefault(b => b.RemainingQuantity > 0);
+            ApplyActiveBatchCost(product, activeBatch);
+        }
+
+        private static void ApplyActiveBatchCost(Product product, ProductBatch? activeBatch)
+        {
+            // No batch currently has stock — leave the last-known cost as-is rather than
+            // resetting to 0 just because the shelf is momentarily empty.
+            if (activeBatch == null) return;
+
+            var costChanged = product.CostPrice != activeBatch.CostPrice;
+            product.CostPrice = activeBatch.CostPrice;
+            product.RecommendedRetail = PricingCalculator.RecommendedPrice(product.CostPrice, product.Margin);
+
+            // Store Price follows Recommended Retail automatically, but only when the active
+            // batch's cost genuinely changed (a real FIFO switch, or the product's first-ever
+            // batch) — never on an ordinary sale against the same still-active batch, which
+            // would otherwise silently undo any manual rounding (e.g. $2.99) on every order.
+            // This is what makes pricing stay correct even if no admin is around when a batch
+            // sells out; it also doubles as sensible default pricing the first time a brand-new
+            // product gets its first batch.
+            if (costChanged && product.RecommendedRetail.HasValue)
+                product.Price = product.RecommendedRetail.Value;
         }
     }
 }

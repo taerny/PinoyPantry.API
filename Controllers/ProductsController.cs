@@ -137,6 +137,46 @@ namespace PinoyPantry.API.Controllers
             return Ok(rows);
         }
 
+        // POST: api/products/import/pdf-preview — Admin only. Extracts Code + Name pairs from a
+        // supplier invoice PDF — nothing else is trusted from it (see PdfInvoiceParseService).
+        [Authorize(Roles = "Admin")]
+        [HttpPost("import/pdf-preview")]
+        public async Task<ActionResult<List<ImportPdfPreviewRowDto>>> PreviewPdfImport(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest(new { message = "No file uploaded." });
+
+            List<ImportPdfPreviewRowDto> rows;
+            try
+            {
+                using var stream = file.OpenReadStream();
+                rows = await _productService.PreviewPdfImportAsync(stream);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = $"Could not read this PDF: {ex.Message}" });
+            }
+
+            if (rows.Count == 0)
+                return BadRequest(new { message = "No product codes found in this PDF — check it's the right file." });
+
+            return Ok(rows);
+        }
+
+        // POST: api/products/import/pdf-confirm — Admin only. Bulk-creates draft products
+        // (Code + Name only, unpublished) from the reviewed PDF import rows. Cost, quantity,
+        // and category are filled in afterward per product via the normal Edit/Batches flow.
+        [Authorize(Roles = "Admin")]
+        [HttpPost("import/pdf-confirm")]
+        public async Task<ActionResult> ConfirmPdfImport(List<ConfirmImportPdfRowDto> rows)
+        {
+            if (rows == null || rows.Count == 0)
+                return BadRequest(new { message = "No rows provided." });
+
+            var imported = await _productService.ConfirmPdfImportAsync(rows);
+            return Ok(new { message = $"Imported {imported} product(s) as drafts — set category, cost, and quantity for each via Edit/Batches." });
+        }
+
         // GET: api/products/5/batches — Admin only. Lists a product's batches (oldest/next-
         // to-sell first) plus a suggested next batch number for the "add batch" form.
         [Authorize(Roles = "Admin")]

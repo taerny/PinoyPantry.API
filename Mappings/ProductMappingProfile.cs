@@ -14,7 +14,13 @@ namespace PinoyPantry.API.Mappings
             CreateMap<Product, AdminProductResponseDto>()
                 .ForMember(dest => dest.ProfitAmount, opt => opt.MapFrom(src => PricingCalculator.Breakdown(src.Price, src.CostPrice).ProfitAmount))
                 .ForMember(dest => dest.GstAmount, opt => opt.MapFrom(src => PricingCalculator.Breakdown(src.Price, src.CostPrice).GstAmount))
-                .ForMember(dest => dest.GstRate, opt => opt.MapFrom(src => PricingCalculator.GstRate));
+                .ForMember(dest => dest.GstRate, opt => opt.MapFrom(src => PricingCalculator.GstRate))
+                // The frontend only shows this when it differs from CostPrice — always mapping
+                // the raw "most recent batch" cost here keeps that decision out of AutoMapper.
+                .ForMember(dest => dest.LatestBatchCostPrice, opt => opt.MapFrom(src =>
+                    src.Batches.Any()
+                        ? src.Batches.OrderByDescending(b => b.CreatedAt).ThenByDescending(b => b.Id).First().CostPrice
+                        : (decimal?)null));
             CreateMap<CreateProductDto, Product>();
             CreateMap<UpdateProductDto, Product>();
 

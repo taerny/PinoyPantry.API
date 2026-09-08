@@ -104,8 +104,20 @@ public class AuthService : IAuthService
 
     public async Task<DashboardStatsDto> GetDashboardStatsAsync()
     {
-        var products = await _context.Products.ToListAsync();
+        var products = await _context.Products.Include(p => p.Batches).ToListAsync();
         var userCount = await _context.Users.CountAsync();
+
+        // A product can have multiple batches sitting at different costs at once (e.g. an
+        // older cheaper batch still selling alongside a newer, pricier one) — summing per
+        // batch's own RemainingQuantity * CostPrice is the only way to get the true in-stock
+        // value; Product.CostPrice alone only reflects whichever batch is currently active,
+        // so multiplying it by the product's *total* stock overstates/understates the real
+        // figure whenever more than one batch has stock at once.
+        var allBatches = products.SelectMany(p => p.Batches.Select(b => (Product: p, Batch: b))).ToList();
+        var totalCostValue = allBatches.Sum(x => x.Batch.RemainingQuantity * x.Batch.CostPrice);
+        var totalProfitValue = allBatches.Sum(x =>
+            PricingCalculator.Breakdown(x.Product.Price, x.Batch.CostPrice).ProfitAmount * x.Batch.RemainingQuantity);
+        var totalInventoryInvested = allBatches.Sum(x => x.Batch.Subtotal);
 
         var categoryStats = products
             .GroupBy(p => p.Category)
@@ -132,11 +144,12 @@ public class AuthService : IAuthService
             TotalUsers = userCount,
             ProductsWithImages = products.Count(p => !string.IsNullOrEmpty(p.ImageUrl)),
             TotalCategories = categoryStats.Count,
-            TotalCostValue = products.Sum(p => p.CostPrice * p.StockQuantity),
+            TotalCostValue = totalCostValue,
+            TotalInventoryInvested = totalInventoryInvested,
             // Price is GST-inclusive (what the customer pays) — must remove GST before
             // comparing against Cost, same as PricingCalculator.Breakdown used on the
             // product edit form, otherwise this overstates profit by the GST portion.
-            TotalProfitValue = products.Sum(p => PricingCalculator.Breakdown(p.Price, p.CostPrice).ProfitAmount * p.StockQuantity),
+            TotalProfitValue = totalProfitValue,
             CategoryStats = categoryStats,
             RecentProducts = recentProducts
         };

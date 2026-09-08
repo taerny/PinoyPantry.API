@@ -65,16 +65,12 @@ namespace PinoyPantry.API.Services
             return updated == null ? null : _mapper.Map<ProductResponseDto>(updated);
         }
 
-        // CostPrice is derived from Subtotal/Qty when both are present (locks it as invoice-
-        // derived); otherwise whatever CostPrice was set directly is kept (manual products with
-        // no supplier invoice line). RecommendedRetail is ALWAYS server-computed from the final
-        // CostPrice + Margin — never trusted from client input.
+        // CostPrice is no longer derived from Subtotal/Qty here — cost lives per batch now and
+        // is kept in sync by BatchStockService.SyncProductCostAsync (see ProductBatchService).
+        // This just recomputes RecommendedRetail from whatever CostPrice currently is plus the
+        // admin-set Margin — never trusted from client input.
         private static void ApplyPricingCalculations(Product product)
         {
-            var derivedCost = PricingCalculator.UnitCost(product.Subtotal, product.PackQty);
-            if (derivedCost.HasValue)
-                product.CostPrice = derivedCost.Value;
-
             product.RecommendedRetail = PricingCalculator.RecommendedPrice(product.CostPrice, product.Margin);
         }
 
@@ -132,6 +128,47 @@ namespace PinoyPantry.API.Services
             }
 
             return imported;
+        }
+
+        public async Task<List<ImportPdfPreviewRowDto>> PreviewPdfImportAsync(Stream pdfStream)
+        {
+            var parsed = PdfInvoiceParseService.Parse(pdfStream);
+            var existingCodes = await _productRepository.GetExistingCodesAsync(parsed.Select(r => r.Code));
+
+            return parsed.Select(r => new ImportPdfPreviewRowDto
+            {
+                Code = r.Code,
+                Name = r.Name,
+                AlreadyExists = existingCodes.Contains(r.Code),
+            }).ToList();
+        }
+
+        public async Task<int> ConfirmPdfImportAsync(IEnumerable<ConfirmImportPdfRowDto> rows)
+        {
+            var rowList = rows.ToList();
+            var existingCodes = await _productRepository.GetExistingCodesAsync(rowList.Select(r => r.Code));
+
+            // Skip duplicates server-side regardless of what the client sends — the preview
+            // flag is a UI hint, not the source of truth.
+            var newProducts = rowList
+                .Where(r => !existingCodes.Contains(r.Code))
+                .Select(r => new Product
+                {
+                    Name = r.Name,
+                    Code = r.Code,
+                    Description = string.Empty,
+                    Category = string.Empty,
+                    ImageUrl = string.Empty,
+                    Price = 0,
+                    CostPrice = 0,
+                    StockQuantity = 0,
+                    IsPublished = false, // incomplete — no cost/qty/category yet, never live by accident
+                })
+                .ToList();
+
+            if (newProducts.Count == 0) return 0;
+
+            return await _productRepository.ImportProductsAsync(newProducts);
         }
     }
 }

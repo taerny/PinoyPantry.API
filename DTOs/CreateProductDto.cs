@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace PinoyPantry.API.DTOs
 {
     public class CreateProductDto
@@ -7,7 +5,6 @@ namespace PinoyPantry.API.DTOs
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public decimal Price { get; set; }
-        public decimal CostPrice { get; set; }
         public string ImageUrl { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
 
@@ -19,13 +16,13 @@ namespace PinoyPantry.API.DTOs
         // server-computed RecommendedRetail. See PricingCalculator.
         public decimal? Margin { get; set; }
 
-        // Supplier invoice reference data. CostPrice above is used as-is UNLESS both of these
-        // are provided, in which case CostPrice is derived as Subtotal / Qty instead.
+        // Supplier's product code — optional, useful for matching future invoices/re-imports
+        // to this same product. Leave blank and one auto-generates (see ProductService).
         public string? Code { get; set; }
 
-        [JsonPropertyName("qty")]
-        public int? PackQty { get; set; }
-
-        public decimal? Subtotal { get; set; }
+        // CostPrice/PackQty/Subtotal are intentionally not accepted here — cost now lives per
+        // batch (ProductBatch.CostPrice/Subtotal), never written directly on the product, so a
+        // product edit can never silently overwrite the batch-synced cost. See
+        // BatchStockService.SyncProductCostAsync.
     }
 }
