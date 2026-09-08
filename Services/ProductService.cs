@@ -38,6 +38,11 @@ namespace PinoyPantry.API.Services
         public async Task<ProductResponseDto> CreateProductAsync(CreateProductDto productDto)
         {
             var product = _mapper.Map<Product>(productDto);
+
+            // A brand-new product always starts at 0 stock (batches are added afterward) — never
+            // let it go live with nothing to sell, regardless of what the client sent.
+            product.IsPublished = false;
+
             ApplyPricingCalculations(product);
             var createdProduct = await _productRepository.CreateProductAsync(product);
 
@@ -57,6 +62,18 @@ namespace PinoyPantry.API.Services
             var existing = await _productRepository.GetProductByIdAsync(id);
             if (existing == null)
                 return null;
+
+            // Stock isn't part of UpdateProductDto (batches own it), so this is always the
+            // real, current on-hand quantity — a product with none can't go live, or a
+            // customer could land on a page for something that isn't actually available.
+            if (productDto.IsPublished && existing.StockQuantity <= 0)
+                throw new InvalidOperationException("Cannot publish a product with no stock — add a batch first.");
+
+            // Same reasoning as Publish above: a real price only matters once the product is
+            // actually sellable. Before that, edits (e.g. setting Margin ahead of the first
+            // batch) shouldn't be blocked just because Price is still its default 0.
+            if (existing.StockQuantity > 0 && productDto.Price <= 0)
+                throw new InvalidOperationException("Price must be greater than $0 once the product has stock.");
 
             _mapper.Map(productDto, existing);
             ApplyPricingCalculations(existing);

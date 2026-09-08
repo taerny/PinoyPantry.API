@@ -70,7 +70,16 @@ namespace PinoyPantry.API.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ProductResponseDto>> UpdateProduct(int id, UpdateProductDto productDto)
         {
-            var updatedProduct = await _productService.UpdateProductAsync(id, productDto);
+            ProductResponseDto? updatedProduct;
+            try
+            {
+                updatedProduct = await _productService.UpdateProductAsync(id, productDto);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+
             if (updatedProduct == null)
                 return NotFound(new { message = $"Product with ID {id} not found." });
 

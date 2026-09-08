@@ -14,8 +14,12 @@ namespace PinoyPantry.API.Validators
             RuleFor(x => x.Description)
                 .MaximumLength(500).WithMessage("Description cannot exceed 500 characters.");
 
+            // A brand-new product has no batch yet, so there's no cost to base a Recommended
+            // Retail on — forcing a real price here just means the admin types a throwaway
+            // number that gets overwritten the moment the first batch sets a real cost. Price
+            // can start at 0; it stays unpublished/out-of-stock until a batch brings it to life.
             RuleFor(x => x.Price)
-                .GreaterThan(0).WithMessage("Price must be greater than zero.");
+                .GreaterThanOrEqualTo(0).WithMessage("Price cannot be negative.");
 
             RuleFor(x => x.Category)
                 .NotEmpty().WithMessage("Category is required.");
