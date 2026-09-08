@@ -18,6 +18,7 @@ namespace PinoyPantry.API.Data
         public DbSet<BankDetails> BankDetails { get; set; }
         public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
         public DbSet<PasabuyOrder> PasabuyOrders { get; set; }
+        public DbSet<PasabuyOrderItem> PasabuyOrderItems { get; set; }
         public DbSet<ProductBatch> ProductBatches { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -69,6 +70,12 @@ namespace PinoyPantry.API.Data
                 .HasMany(o => o.Items)
                 .WithOne(i => i.Order)
                 .HasForeignKey(i => i.OrderId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<PasabuyOrder>()
+                .HasMany(o => o.Items)
+                .WithOne(i => i.PasabuyOrder)
+                .HasForeignKey(i => i.PasabuyOrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<HeroContent>().HasData(

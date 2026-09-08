@@ -252,6 +252,13 @@ public class EmailService : IEmailService
     {
         using var client = BuildSmtpClient(out var smtpUser, out var toAddress);
 
+        var itemLines = order.Items.Count > 0
+            ? string.Join("\n", order.Items.Select((item, i) =>
+                $"{i + 1}. {item.ProductName} — Qty {item.Quantity}" +
+                (string.IsNullOrWhiteSpace(item.Notes) ? "" : $" ({item.Notes})") +
+                (string.IsNullOrWhiteSpace(item.ImageUrl) ? "" : $"\n   Reference photo: {item.ImageUrl}")))
+            : order.ItemsRequested; // legacy free-text fallback for pre-item orders
+
         var mail = new MailMessage
         {
             From = new MailAddress(smtpUser, "PinoyPantry Website"),
@@ -264,7 +271,7 @@ public class EmailService : IEmailService
                 Email: {order.Email ?? "(not given)"}
 
                 Items requested:
-                {order.ItemsRequested}
+                {itemLines}
 
                 Notes:
                 {(string.IsNullOrWhiteSpace(order.Notes) ? "(none)" : order.Notes)}

@@ -9,10 +9,13 @@ namespace PinoyPantry.API.Models
         // Optional — some customers only give a phone number.
         public string? Email { get; set; }
 
-        // Free-text list of items wanted — these aren't in the regular product
-        // catalog, so a rigid line-item picker doesn't fit this use case.
-        public string ItemsRequested { get; set; } = string.Empty;
+        // Legacy free-text list of items — superseded by the structured Items below (each a
+        // real name/qty/image/notes row), but kept around for old submissions that only ever
+        // had this field. New orders leave it blank.
+        public string? ItemsRequested { get; set; }
         public string? Notes { get; set; }
+
+        public List<PasabuyOrderItem> Items { get; set; } = new();
 
         // Set by the admin once they've followed up with the customer.
         public bool Contacted { get; set; }
