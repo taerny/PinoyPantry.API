@@ -171,12 +171,12 @@ public class EmailService : IEmailService
         var extraBlocks = isPaid
             ? ""
             : $"""
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(249,168,37,0.12); border:1px solid rgba(249,168,37,0.4); border-radius:8px; margin-bottom:8px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:rgba(249,168,37,0.12); border:1px solid rgba(249,168,37,0.4); border-radius:8px; margin-bottom:16px;">
                   <tr><td style="padding:14px 16px; font-size:16px; color:#5a4200;">
-                    <strong>Pay later:</strong> please settle <strong>${order.Total:F2}</strong> in-store on your next visit. Use <strong>{order.InvoiceNumber}</strong> as your reference.
+                    <strong>Pay later:</strong> please settle <strong>${order.Total:F2}</strong> in-store on your next visit, or by bank transfer using the details below.
                   </td></tr>
                 </table>
-                """;
+                """ + await BuildPaymentInstructionsBlock(order.InvoiceNumber, introText: "Prefer to pay by bank transfer? Use the details below.");
 
         var mail = new MailMessage
         {
