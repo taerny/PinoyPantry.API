@@ -365,6 +365,9 @@ namespace PinoyPantry.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal?>("AmountPaid")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Channel")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");

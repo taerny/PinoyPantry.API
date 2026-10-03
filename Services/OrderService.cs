@@ -212,6 +212,7 @@ namespace PinoyPantry.API.Services
                 DeliveryMethod = null,
                 DeliveryFee = 0.00m,
                 Total = total,
+                AmountPaid = dto.AlreadyPaid ? total : null,
                 Items = itemsToCreate,
             };
 
@@ -285,6 +286,11 @@ namespace PinoyPantry.API.Services
                 }
             }
 
+            // Remember what the customer actually paid — later corrections change Total, and
+            // the invoice shows the difference to refund.
+            if (status == "Paid" && order.Status != "Paid")
+                order.AmountPaid = order.Total;
+
             order.Status = status;
             await _context.SaveChangesAsync();
 
@@ -306,9 +312,8 @@ namespace PinoyPantry.API.Services
             if (order == null)
                 return (null, null);
 
-            var itemsTotal = order.Items.Sum(i => i.Price * i.Quantity);
             order.DeliveryFee = deliveryFee;
-            order.Total = itemsTotal + deliveryFee;
+            RecalculateTotal(order);
             await _context.SaveChangesAsync();
 
             if (!string.IsNullOrWhiteSpace(order.CustomerEmail))
@@ -326,6 +331,93 @@ namespace PinoyPantry.API.Services
             return (ToDto(order), null);
         }
 
+        // Sales return / order correction (admin only): change how many of one line the
+        // customer is taking — e.g. they returned some, or changed their mind before pickup.
+        // Only the difference moves stock, and the line keeps the price it was sold at.
+        // Allowed on Pending and Paid orders; Cancelled/Completed are final.
+        public async Task<(OrderResponseDto? Order, string? Error)> UpdateItemQuantityAsync(int orderId, int itemId, int quantity)
+        {
+            var order = await _context.Orders
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            var item = order?.Items.FirstOrDefault(i => i.Id == itemId);
+            if (order == null || item == null)
+                return (null, null);
+
+            if (order.Status is not ("Pending" or "Paid"))
+                return (null, $"This order is already {order.Status} and its items can no longer be edited.");
+
+            if (quantity < 1)
+                return (null, "Quantity must be at least 1 — remove the item instead.");
+
+            var delta = quantity - item.Quantity;
+            if (delta == 0)
+                return (ToDto(order), null);
+
+            var product = item.ProductId == null ? null : await _context.Products.FindAsync(item.ProductId);
+
+            if (delta > 0)
+            {
+                if (product == null)
+                    return (null, $"\"{item.ProductName}\" no longer exists, so its quantity can't be increased.");
+
+                if (product.StockQuantity < delta)
+                    return (null, $"Sorry, only {product.StockQuantity} more of \"{product.Name}\" left in stock.");
+
+                await _batchStockService.DeductAsync(product, delta);
+            }
+            else if (product != null)
+            {
+                await _batchStockService.RestockAsync(product, -delta);
+            }
+
+            item.Quantity = quantity;
+            RecalculateTotal(order);
+            await _context.SaveChangesAsync();
+
+            return (ToDto(order), null);
+        }
+
+        // Sales return / order correction (admin only): drop a line entirely. Its stock goes
+        // back and the total is recomputed. The last line can't be removed — cancel the
+        // whole order instead.
+        public async Task<(OrderResponseDto? Order, string? Error)> RemoveItemAsync(int orderId, int itemId)
+        {
+            var order = await _context.Orders
+                .Include(o => o.Items)
+                .FirstOrDefaultAsync(o => o.Id == orderId);
+
+            var item = order?.Items.FirstOrDefault(i => i.Id == itemId);
+            if (order == null || item == null)
+                return (null, null);
+
+            if (order.Status is not ("Pending" or "Paid"))
+                return (null, $"This order is already {order.Status} and its items can no longer be edited.");
+
+            if (order.Items.Count <= 1)
+                return (null, "This is the only item on the order — cancel the whole order instead.");
+
+            if (item.ProductId != null)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null)
+                    await _batchStockService.RestockAsync(product, item.Quantity);
+            }
+
+            order.Items.Remove(item);
+            _context.OrderItems.Remove(item);
+            RecalculateTotal(order);
+            await _context.SaveChangesAsync();
+
+            return (ToDto(order), null);
+        }
+
+        private static void RecalculateTotal(Order order)
+        {
+            order.Total = order.Items.Sum(i => i.Price * i.Quantity) + (order.DeliveryFee ?? 0);
+        }
+
         private static OrderResponseDto ToDto(Order order) => new()
         {
             Id = order.Id,
@@ -340,9 +432,11 @@ namespace PinoyPantry.API.Services
             Status = order.Status,
             Channel = order.Channel,
             Total = order.Total,
+            AmountPaid = order.AmountPaid,
             CreatedAt = order.CreatedAt,
-            Items = order.Items.Select(i => new OrderItemResponseDto
+            Items = order.Items.OrderBy(i => i.Id).Select(i => new OrderItemResponseDto
             {
+                Id = i.Id,
                 ProductName = i.ProductName,
                 Price = i.Price,
                 Quantity = i.Quantity,

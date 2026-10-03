@@ -46,6 +46,7 @@ namespace PinoyPantry.API.DTOs
         public string Status { get; set; } = string.Empty;
         public string Channel { get; set; } = "Online";
         public decimal Total { get; set; }
+        public decimal? AmountPaid { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<OrderItemResponseDto> Items { get; set; } = new();
     }
@@ -55,8 +56,16 @@ namespace PinoyPantry.API.DTOs
         public decimal DeliveryFee { get; set; }
     }
 
+    // Admin-only order correction: the new quantity for one line (whole number, at least 1 —
+    // removing a line entirely is its own DELETE endpoint).
+    public class UpdateOrderItemDto
+    {
+        public int Quantity { get; set; }
+    }
+
     public class OrderItemResponseDto
     {
+        public int Id { get; set; }
         public string ProductName { get; set; } = string.Empty;
         public decimal Price { get; set; }
         public int Quantity { get; set; }

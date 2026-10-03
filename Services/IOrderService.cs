@@ -10,5 +10,7 @@ namespace PinoyPantry.API.Services
         Task<OrderResponseDto> CreateWalkInOrderAsync(CreateWalkInOrderDto dto);
         Task<(OrderResponseDto? Order, string? Error)> UpdateStatusAsync(int id, string status);
         Task<(OrderResponseDto? Order, string? Error)> UpdateDeliveryFeeAsync(int id, decimal deliveryFee);
+        Task<(OrderResponseDto? Order, string? Error)> UpdateItemQuantityAsync(int orderId, int itemId, int quantity);
+        Task<(OrderResponseDto? Order, string? Error)> RemoveItemAsync(int orderId, int itemId);
     }
 }

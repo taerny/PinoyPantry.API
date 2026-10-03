@@ -103,4 +103,38 @@ public class OrdersController : ControllerBase
 
         return Ok(order);
     }
+
+    // PUT: api/orders/5/items/12 — Admin only. Sales return / correction: change a line's
+    // quantity on a Pending or Paid order; only the difference moves stock.
+    [Authorize(Roles = "Admin")]
+    [HttpPut("{id}/items/{itemId}")]
+    public async Task<ActionResult<OrderResponseDto>> UpdateItem(int id, int itemId, UpdateOrderItemDto dto)
+    {
+        var (order, error) = await _orderService.UpdateItemQuantityAsync(id, itemId, dto.Quantity);
+
+        if (order == null && error == null)
+            return NotFound(new { message = "Order item not found." });
+
+        if (error != null)
+            return UnprocessableEntity(new { message = error });
+
+        return Ok(order);
+    }
+
+    // DELETE: api/orders/5/items/12 — Admin only. Sales return / correction: remove a line
+    // from a Pending or Paid order; its stock goes back.
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id}/items/{itemId}")]
+    public async Task<ActionResult<OrderResponseDto>> RemoveItem(int id, int itemId)
+    {
+        var (order, error) = await _orderService.RemoveItemAsync(id, itemId);
+
+        if (order == null && error == null)
+            return NotFound(new { message = "Order item not found." });
+
+        if (error != null)
+            return UnprocessableEntity(new { message = error });
+
+        return Ok(order);
+    }
 }

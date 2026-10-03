@@ -34,6 +34,12 @@ namespace PinoyPantry.API.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Total { get; set; }
 
+        // What the customer actually paid, snapshotted the moment the order becomes Paid.
+        // Later corrections (removing/reducing items) change Total but not this, so the
+        // invoice can show the difference to refund. Null = never paid.
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? AmountPaid { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public List<OrderItem> Items { get; set; } = new();
