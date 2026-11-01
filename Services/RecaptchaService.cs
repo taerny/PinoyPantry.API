@@ -23,15 +23,16 @@ namespace PinoyPantry.API.Services
 
         public async Task<bool> VerifyAsync(string? token, string? remoteIp)
         {
-            if (string.IsNullOrWhiteSpace(token))
-                return false;
-
+            // reCAPTCHA is opt-in: with no secret configured the check is switched off (the site
+            // works exactly as it did before). Once a secret is set it is enforced, and fails
+            // closed - a missing token, a network error or any non-success answer all count as
+            // "not verified".
             var secret = _config["Recaptcha:SecretKey"];
             if (string.IsNullOrWhiteSpace(secret))
-            {
-                _logger.LogError("Recaptcha:SecretKey is not configured — rejecting all reCAPTCHA checks.");
+                return true;
+
+            if (string.IsNullOrWhiteSpace(token))
                 return false;
-            }
 
             var form = new Dictionary<string, string> { ["secret"] = secret, ["response"] = token };
             if (!string.IsNullOrWhiteSpace(remoteIp))
