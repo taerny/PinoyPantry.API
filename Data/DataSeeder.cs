@@ -17,8 +17,12 @@ public static class DataSeeder
                 await roleManager.CreateAsync(new IdentityRole(role));
         }
 
-        var adminEmail = "admin@pinoypantry.com";
-        if (await userManager.FindByEmailAsync(adminEmail) == null)
+        // Only bootstrap a default admin on a database that has none at all. If an admin already
+        // exists under any email (e.g. the account was renamed), never create a second one with
+        // the well-known default password.
+        var adminEmail = "admin@pinoypantry.co.nz";
+        if ((await userManager.GetUsersInRoleAsync("Admin")).Count == 0
+            && await userManager.FindByEmailAsync(adminEmail) == null)
         {
             var admin = new ApplicationUser
             {

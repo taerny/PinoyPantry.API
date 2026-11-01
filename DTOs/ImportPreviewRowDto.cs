@@ -19,6 +19,12 @@ namespace PinoyPantry.API.DTOs
         public decimal Price { get; set; }
 
         public bool IsPublished { get; set; }
+
+        // Admin-only copy straight from the sheet (e.g. "Short Website Description").
+        public string ShortDescription { get; set; } = string.Empty;
+
+        // True if a product with this name already exists — skipped on import (server-enforced).
+        public bool AlreadyExists { get; set; }
     }
 
     public class ImportColumnDto

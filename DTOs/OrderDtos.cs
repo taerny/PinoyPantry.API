@@ -47,6 +47,8 @@ namespace PinoyPantry.API.DTOs
         public string Channel { get; set; } = "Online";
         public decimal Total { get; set; }
         public decimal? AmountPaid { get; set; }
+        public string? CustomerIp { get; set; }
+        public string? UserAgent { get; set; }
         public DateTime CreatedAt { get; set; }
         public List<OrderItemResponseDto> Items { get; set; } = new();
     }

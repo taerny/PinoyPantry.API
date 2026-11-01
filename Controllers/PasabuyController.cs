@@ -57,6 +57,12 @@ public class PasabuyController : ControllerBase
     [HttpPost]
     public async Task<IActionResult> Create(CreatePasabuyOrderDto dto)
     {
+        // Enforced here, not just in the UI: once the cut-off has passed (or the admin has closed
+        // orders) nothing can be submitted, however the request arrives.
+        var settings = await PasabuySettingsService.LoadAsync(_context);
+        if (!PasabuySettingsService.IsOpen(settings))
+            return BadRequest(new { message = settings.ClosedMessage });
+
         var name = dto.Name?.Trim() ?? "";
         var phone = dto.Phone?.Trim() ?? "";
         var items = (dto.Items ?? new())

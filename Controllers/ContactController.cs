@@ -9,11 +9,13 @@ namespace PinoyPantry.API.Controllers;
 public class ContactController : ControllerBase
 {
     private readonly IEmailService _emailService;
+    private readonly IRecaptchaService _recaptcha;
     private readonly ILogger<ContactController> _logger;
 
-    public ContactController(IEmailService emailService, ILogger<ContactController> logger)
+    public ContactController(IEmailService emailService, IRecaptchaService recaptcha, ILogger<ContactController> logger)
     {
         _emailService = emailService;
+        _recaptcha = recaptcha;
         _logger = logger;
     }
 
@@ -27,6 +29,9 @@ public class ContactController : ControllerBase
         {
             return BadRequest(new { message = "All fields are required." });
         }
+
+        if (!await _recaptcha.VerifyAsync(dto.RecaptchaToken, HttpContext.Connection.RemoteIpAddress?.ToString()))
+            return BadRequest(new { message = "Security check failed. Please refresh the page and try again." });
 
         try
         {

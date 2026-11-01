@@ -22,7 +22,10 @@ namespace PinoyPantry.API.Mappings
                         ? src.Batches.OrderByDescending(b => b.CreatedAt).ThenByDescending(b => b.Id).First().CostPrice
                         : (decimal?)null));
             CreateMap<CreateProductDto, Product>();
-            CreateMap<UpdateProductDto, Product>();
+            CreateMap<UpdateProductDto, Product>()
+                // Only overwrite when the client actually sent a value, so a form that doesn't
+                // know about this field can never blank it out.
+                .ForMember(dest => dest.ShortDescription, opt => opt.Condition((src, dest, srcMember) => srcMember != null));
 
             // StockQuantity on the DTO represents the quantity being received in this import —
             // it becomes the product's initial batch (see ProductService.ImportProductsAsync),

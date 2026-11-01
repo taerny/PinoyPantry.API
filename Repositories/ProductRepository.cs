@@ -161,7 +161,14 @@ namespace PinoyPantry.API.Repositories
             }
         }
 
-        public async Task CreateInitialBatchAsync(int productId, int quantity)
+        public async Task<HashSet<string>> GetExistingNamesAsync()
+        {
+            return (await _context.Products.AsNoTracking().Select(p => p.Name).ToListAsync())
+                .Select(n => System.Text.RegularExpressions.Regex.Replace(n.Trim(), @"\s+", " ").ToLowerInvariant())
+                .ToHashSet();
+        }
+
+        public async Task CreateInitialBatchAsync(int productId, int quantity, decimal costPrice)
         {
             var product = await _context.Products.FindAsync(productId);
             if (product == null || quantity <= 0) return;
@@ -172,6 +179,8 @@ namespace PinoyPantry.API.Repositories
                 BatchNumber = "1",
                 Quantity = quantity,
                 RemainingQuantity = quantity,
+                CostPrice = costPrice,
+                Subtotal = Math.Round(costPrice * quantity, 2),
             });
             product.StockQuantity = quantity;
 

@@ -21,7 +21,10 @@ namespace PinoyPantry.API.Repositories
         // Creates "Batch 1" for a freshly-imported product and sets its StockQuantity to
         // match — the equivalent of what the AddProductBatches migration did to backfill
         // products that already existed before batch tracking began.
-        Task CreateInitialBatchAsync(int productId, int quantity);
+        Task CreateInitialBatchAsync(int productId, int quantity, decimal costPrice);
+
+        // Lower-cased, trimmed names of every existing product — used to skip duplicates on import.
+        Task<HashSet<string>> GetExistingNamesAsync();
 
         // Which of these codes already belong to an existing product — used by the PDF import
         // preview to flag likely duplicates before the admin confirms anything.

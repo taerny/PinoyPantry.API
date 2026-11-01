@@ -20,6 +20,12 @@ namespace PinoyPantry.API.DTOs
 
         public string? Code { get; set; }
 
+        // Admin-only — never part of the public ProductResponseDto.
+        public string ShortDescription { get; set; } = string.Empty;
+
+        // When the product was added — lets the admin sort/spot newly imported items.
+        public DateTime CreatedAt { get; set; }
+
         [JsonPropertyName("qty")]
         public int? PackQty { get; set; }
 

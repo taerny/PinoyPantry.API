@@ -382,6 +382,10 @@ namespace PinoyPantry.API.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CustomerIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("nvarchar(45)");
+
                     b.Property<string>("CustomerName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -407,6 +411,10 @@ namespace PinoyPantry.API.Migrations
 
                     b.Property<decimal>("Total")
                         .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
 
                     b.HasKey("Id");
 
@@ -515,6 +523,76 @@ namespace PinoyPantry.API.Migrations
                     b.ToTable("PasabuyOrderItems");
                 });
 
+            modelBuilder.Entity("PinoyPantry.API.Models.PasabuySettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BadgeText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClosedBadgeText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClosedMessage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Collection")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CutoffDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("EstimatedArrival")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("ForceClosed")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("FormBlurb")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FormTitle")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Heading")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("HowItWorks")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Intro")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PleaseNote")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PricingText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("PasabuySettings");
+                });
+
             modelBuilder.Entity("PinoyPantry.API.Models.Product", b =>
                 {
                     b.Property<int>("Id")
@@ -563,6 +641,10 @@ namespace PinoyPantry.API.Migrations
                     b.Property<decimal?>("RecommendedRetail")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<string>("ShortDescription")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("StockQuantity")
                         .HasColumnType("int");
 
@@ -585,6 +667,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Lucky Me Pancit Canton Original",
                             Price = 1.50m,
+                            ShortDescription = "",
                             StockQuantity = 100
                         },
                         new
@@ -598,6 +681,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Datu Puti Sukang Maasim",
                             Price = 2.99m,
+                            ShortDescription = "",
                             StockQuantity = 80
                         },
                         new
@@ -611,6 +695,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Silver Swan Soy Sauce",
                             Price = 3.49m,
+                            ShortDescription = "",
                             StockQuantity = 90
                         },
                         new
@@ -624,6 +709,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Jufran Banana Ketchup",
                             Price = 2.75m,
+                            ShortDescription = "",
                             StockQuantity = 70
                         },
                         new
@@ -637,6 +723,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Knorr Sinigang Mix",
                             Price = 1.99m,
+                            ShortDescription = "",
                             StockQuantity = 120
                         },
                         new
@@ -650,6 +737,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Mang Tomas All-Around Sarsa",
                             Price = 3.25m,
+                            ShortDescription = "",
                             StockQuantity = 60
                         },
                         new
@@ -663,6 +751,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Spam Lite",
                             Price = 4.99m,
+                            ShortDescription = "",
                             StockQuantity = 50
                         },
                         new
@@ -676,6 +765,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Century Tuna Flakes in Oil",
                             Price = 2.50m,
+                            ShortDescription = "",
                             StockQuantity = 110
                         },
                         new
@@ -689,6 +779,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Skyflakes Crackers",
                             Price = 1.75m,
+                            ShortDescription = "",
                             StockQuantity = 200
                         },
                         new
@@ -702,6 +793,7 @@ namespace PinoyPantry.API.Migrations
                             IsPublished = false,
                             Name = "Bear Brand Sterilized Milk",
                             Price = 1.25m,
+                            ShortDescription = "",
                             StockQuantity = 150
                         });
                 });

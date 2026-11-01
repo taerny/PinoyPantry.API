@@ -34,6 +34,10 @@ namespace PinoyPantry.API.Models
         // Supplier invoice reference data (Code/Subtotal) plus the pack size needed to derive
         // CostPrice from it — see PricingCalculator.UnitCost. Subtotal is locked once set: it's
         // the source-of-truth invoice line amount, never edited through the UI.
+        // Admin-only copy for the website listing — written ahead of time (e.g. from an import) so it can be
+        // reviewed in the admin panel. Never included in public API responses.
+        public string ShortDescription { get; set; } = string.Empty;
+
         public string? Code { get; set; }
 
         public int? PackQty { get; set; }

@@ -17,6 +17,7 @@ namespace PinoyPantry.API.Data
         public DbSet<OrderItem> OrderItems { get; set; }
         public DbSet<BankDetails> BankDetails { get; set; }
         public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
+        public DbSet<PasabuySettings> PasabuySettings { get; set; }
         public DbSet<PasabuyOrder> PasabuyOrders { get; set; }
         public DbSet<PasabuyOrderItem> PasabuyOrderItems { get; set; }
         public DbSet<ProductBatch> ProductBatches { get; set; }

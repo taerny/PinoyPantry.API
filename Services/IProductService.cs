@@ -14,7 +14,8 @@ namespace PinoyPantry.API.Services
         Task<int> DeleteAllProductsAsync();
         Task<Dictionary<string, int>> GetCategoryCountsAsync();
         Task<PagedResult<AdminProductResponseDto>> GetAllProductsAdminAsync(ProductQueryParams query);
-        Task<int> ImportProductsAsync(IEnumerable<ImportProductDto> products);
+        Task<(int Imported, int Skipped)> ImportProductsAsync(IEnumerable<ImportProductDto> products);
+        Task<List<ImportPreviewRowDto>> PreviewImportAsync(Stream fileStream, string fileName);
 
         // PDF invoice import — Code + Name only, nothing else trusted from the PDF. See
         // PdfInvoiceParseService.

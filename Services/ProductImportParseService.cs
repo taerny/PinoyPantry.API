@@ -154,6 +154,53 @@ namespace PinoyPantry.API.Services
             return "";
         }
 
+        // Matches the "restock" sheet layout: Unit of Measure ("Case of 48"), Subtotal (Excl. GST),
+        // Retail price with GST, Short Website Description. See BuildRows.
+        private static readonly string[] UomHeaders = { "unitofmeasure", "uom" };
+        private static readonly string[] PiecesPerCaseHeaders = { "piecespercase", "piecespercarton" };
+        private static readonly string[] SubtotalExGstHeaders = { "subtotalexclgst", "subtotalexgst" };
+        private static readonly string[] StorePriceHeaders = { "retailpricewithgst15", "retailpricewithgst", "storeprice", "sellingprice" };
+        private static readonly string[] DescriptionHeaders = { "shortwebsitedescription", "shortdescription", "websitedescription" };
+
+        private const decimal DefaultMargin = 0.20m;
+
+        // Canonical names for the categories the store already uses, plus common sheet spellings.
+        // Anything not listed falls through as Title Case and shows up as a "(new)" category in the
+        // review table, so a brand-new category is always an explicit, visible choice.
+        private static readonly Dictionary<string, string> CategoryAliases = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["canned goods"] = "Canned Goods", ["canned good"] = "Canned Goods", ["canned"] = "Canned Goods",
+            ["condiments"] = "Condiments", ["condiments and sauces"] = "Condiments", ["condiments & sauces"] = "Condiments", ["sauces"] = "Condiments",
+            ["beverage"] = "Beverages", ["beverages"] = "Beverages", ["drinks"] = "Beverages",
+            ["dairy"] = "Dairy", ["snacks"] = "Snacks", ["snack"] = "Snacks", ["noodles"] = "Noodles",
+            ["soups & mixes"] = "Soups & Mixes", ["soups and mixes"] = "Soups & Mixes", ["dried fish"] = "Dried Fish",
+            ["frozen"] = "Frozen", ["rice & grains"] = "Rice & Grains", ["rice and grains"] = "Rice & Grains", ["sweets"] = "Sweets",
+        };
+
+        private static string NormalizeCategory(string raw)
+        {
+            var key = Regex.Replace(raw.Trim(), @"\s+", " ");
+            if (key.Length == 0) return "";
+            if (CategoryAliases.TryGetValue(key, out var canonical)) return canonical;
+            return CultureInfo.InvariantCulture.TextInfo.ToTitleCase(key.ToLowerInvariant());
+        }
+
+        // Drops promo/placement tags that sit inside the name, e.g. "Juice 220ml (October promo)" or
+        // "Coffee 300g (hanger)" - customers should not see them on the website.
+        private static string CleanName(string name) =>
+            Regex.Replace(name, @"\s*\((?:[^)]*\bpromo\b[^)]*|hanger)\)", "", RegexOptions.IgnoreCase).Trim();
+
+        private static bool TryParseDecimal(string s, out decimal value) =>
+            decimal.TryParse(s, NumberStyles.Any, CultureInfo.InvariantCulture, out value);
+
+        // "Case of 48" -> 48. Falls back to the Pieces per Case column when the text has no number.
+        private static int ParsePiecesPerCase(string uom, string piecesCol)
+        {
+            var m = Regex.Match(uom ?? "", @"(\d+)\s*$");
+            if (m.Success && int.TryParse(m.Groups[1].Value, out var n) && n > 0) return n;
+            return int.TryParse(piecesCol, out var p) && p > 0 ? p : 0;
+        }
+
         private static List<ImportPreviewRowDto> BuildRows(List<string> headers, List<List<string>> dataRows)
         {
             var normalizedHeaders = headers.Select(NormalizeHeader).ToList();
@@ -164,6 +211,17 @@ namespace PinoyPantry.API.Services
             var recommendedRetailIdx = FindColumn(normalizedHeaders, RecommendedRetailHeaders);
             var marginIdx = FindColumn(normalizedHeaders, MarginHeaders);
             var publishedIdx = FindColumn(normalizedHeaders, PublishedHeaders);
+
+            var uomIdx = FindColumn(normalizedHeaders, UomHeaders);
+            var piecesIdx = FindColumn(normalizedHeaders, PiecesPerCaseHeaders);
+            var subtotalExIdx = FindColumn(normalizedHeaders, SubtotalExGstHeaders);
+            var storePriceIdx = FindColumn(normalizedHeaders, StorePriceHeaders);
+            var descriptionIdx = FindColumn(normalizedHeaders, DescriptionHeaders);
+
+            // Restock-sheet mode: quantity comes from "Case of N" (the sheet's own Quantity column is
+            // the number of cases, not units), and cost is Subtotal (Excl. GST) / N per unit.
+            var restockMode = uomIdx != -1 && subtotalExIdx != -1;
+            if (restockMode) stockIdx = uomIdx;
 
             string RoleFor(int idx) =>
                 idx == nameIdx ? "name" :
@@ -178,28 +236,57 @@ namespace PinoyPantry.API.Services
             {
                 string Get(int idx) => idx != -1 && idx < cols.Count ? cols[idx] : "";
 
-                var name = Get(nameIdx);
+                var name = CleanName(Get(nameIdx));
                 if (string.IsNullOrWhiteSpace(name)) continue;
 
+                // Footer lines in a sheet (e.g. "INVOICE TOTAL", no unit of measure) are not products.
+                if (restockMode && string.IsNullOrWhiteSpace(Get(uomIdx))) continue;
+
                 // An explicit Category column (if the sheet has one) always wins over a guess.
-                var explicitCategory = categoryIdx != -1 ? Get(categoryIdx).Trim() : "";
+                var explicitCategory = categoryIdx != -1 ? NormalizeCategory(Get(categoryIdx)) : "";
                 var category = string.IsNullOrEmpty(explicitCategory) ? GuessCategory(name) : explicitCategory;
                 var isPublished = publishedIdx != -1 && Get(publishedIdx).Trim().Equals("true", StringComparison.OrdinalIgnoreCase);
 
+                var piecesPerCase = restockMode ? ParsePiecesPerCase(Get(uomIdx), Get(piecesIdx)) : 0;
+
                 // Every column from the file, in its original order and with its original header
-                // text — nothing hidden, renamed, or reordered. Columns that also play a role
-                // (name/stock/cost/recommendedRetail/margin) are editable and feed the import
-                // payload directly from this same list; everything else is read-only reference.
+                // text. Columns that also play a role are editable and feed the import payload.
                 var columns = new List<ImportColumnDto>();
                 for (var i = 0; i < headers.Count; i++)
                 {
                     if (string.IsNullOrWhiteSpace(headers[i])) continue;
-                    columns.Add(new ImportColumnDto
+
+                    // The sheet's own "Quantity" is the number of cases (always 1) and is never used -
+                    // hide it so it can not be mistaken for the real unit quantity.
+                    if (restockMode && i != uomIdx && StockHeaders.Contains(normalizedHeaders[i])) continue;
+
+                    var value = FormatExtraValue(Get(i));
+                    var columnName = headers[i];
+                    if (i == nameIdx) value = name;
+                    else if (restockMode && i == uomIdx)
                     {
-                        Name = headers[i],
-                        Value = FormatExtraValue(Get(i)),
-                        Role = RoleFor(i),
-                    });
+                        value = piecesPerCase.ToString(CultureInfo.InvariantCulture);
+                        columnName = "Quantity (units)";
+                    }
+                    columns.Add(new ImportColumnDto { Name = columnName, Value = value, Role = RoleFor(i) });
+                }
+
+                var price = 0m;
+                if (restockMode)
+                {
+                    // Cost per unit, GST-exclusive - the system adds GST itself (see PricingCalculator).
+                    if (costIdx == -1)
+                    {
+                        var unitCost = TryParseDecimal(Get(subtotalExIdx), out var sub) && piecesPerCase > 0
+                            ? Math.Round(sub / piecesPerCase, 2) : 0m;
+                        columns.Add(new ImportColumnDto { Name = "Unit Cost (Excl. GST)", Value = unitCost.ToString("0.00", CultureInfo.InvariantCulture), Role = "cost" });
+                    }
+                    if (marginIdx == -1)
+                        columns.Add(new ImportColumnDto { Name = "Margin", Value = DefaultMargin.ToString("0.00", CultureInfo.InvariantCulture), Role = "margin" });
+
+                    // The sheet's own retail price (GST-inclusive) becomes the store price as given.
+                    if (storePriceIdx != -1 && TryParseDecimal(Get(storePriceIdx), out var retail))
+                        price = Math.Round(retail, 2);
                 }
 
                 rows.Add(new ImportPreviewRowDto
@@ -207,8 +294,9 @@ namespace PinoyPantry.API.Services
                     Columns = columns,
                     Category = category,
                     CategoryGuessed = string.IsNullOrEmpty(explicitCategory) && !string.IsNullOrEmpty(category),
-                    Price = 0, // always starts at 0 — the admin's own store price, never auto-filled
+                    Price = price, // 0 unless the sheet carries its own retail price
                     IsPublished = isPublished,
+                    ShortDescription = descriptionIdx != -1 ? Get(descriptionIdx).Trim() : "",
                 });
             }
 

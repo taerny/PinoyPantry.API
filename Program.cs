@@ -2,6 +2,7 @@ using System.Text;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -75,6 +76,19 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IBankDetailsService, BankDetailsService>();
 builder.Services.AddScoped<IBatchStockService, BatchStockService>();
 builder.Services.AddScoped<IProductBatchService, ProductBatchService>();
+builder.Services.AddHttpClient<IRecaptchaService, RecaptchaService>(c => c.Timeout = TimeSpan.FromSeconds(10));
+
+// Azure App Service sits in front of the app as a proxy, so the customer's real IP arrives in
+// X-Forwarded-For rather than as the connection's address. App Service's front end isn't a
+// fixed known proxy, so the known-network list is cleared; the default ForwardLimit of 1
+// means only the rightmost entry (the one App Service itself appended) is trusted, so a
+// client can't spoof its IP by sending its own X-Forwarded-For header.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 // Azure Blob Storage
 builder.Services.AddSingleton<IBlobStorageService, BlobStorageService>();
@@ -121,6 +135,8 @@ using (var scope = app.Services.CreateScope())
 
 // Global exception handling — must be first in the pipeline
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.UseForwardedHeaders();
 
 if (app.Environment.IsDevelopment())
 {

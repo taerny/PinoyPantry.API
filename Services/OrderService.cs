@@ -50,7 +50,7 @@ namespace PinoyPantry.API.Services
             return order == null ? null : ToDto(order);
         }
 
-        public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderDto dto)
+        public async Task<OrderResponseDto> CreateOrderAsync(CreateOrderDto dto, string? customerIp, string? userAgent)
         {
             if (dto.Items == null || dto.Items.Count == 0)
                 throw new InvalidOperationException("Cart is empty.");
@@ -115,6 +115,8 @@ namespace PinoyPantry.API.Services
                 DeliveryMethod = dto.DeliveryMethod,
                 DeliveryFee = deliveryFee,
                 Total = total + (deliveryFee ?? 0),
+                CustomerIp = customerIp,
+                UserAgent = userAgent is { Length: > 512 } ? userAgent[..512] : userAgent,
                 Items = itemsToCreate,
             };
 
@@ -433,6 +435,8 @@ namespace PinoyPantry.API.Services
             Channel = order.Channel,
             Total = order.Total,
             AmountPaid = order.AmountPaid,
+            CustomerIp = order.CustomerIp,
+            UserAgent = order.UserAgent,
             CreatedAt = order.CreatedAt,
             Items = order.Items.OrderBy(i => i.Id).Select(i => new OrderItemResponseDto
             {

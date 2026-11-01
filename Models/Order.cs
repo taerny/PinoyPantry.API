@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PinoyPantry.API.Models
@@ -39,6 +40,15 @@ namespace PinoyPantry.API.Models
         // invoice can show the difference to refund. Null = never paid.
         [Column(TypeName = "decimal(18,2)")]
         public decimal? AmountPaid { get; set; }
+
+        // Where an online order was submitted from — admin-only, to help spot fake or repeated
+        // orders (e.g. several "different" customers from the same IP/device). Null for
+        // walk-in sales and orders placed before this was recorded.
+        [MaxLength(45)]
+        public string? CustomerIp { get; set; }
+
+        [MaxLength(512)]
+        public string? UserAgent { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

@@ -16,6 +16,10 @@ namespace PinoyPantry.API.DTOs
         // server-computed RecommendedRetail. See PricingCalculator.
         public decimal? Margin { get; set; }
 
+        // Null = "not sent, leave the stored value alone" (see ProductMappingProfile) so a client
+        // that does not know about this field can never blank it out.
+        public string? ShortDescription { get; set; }
+
         // Code is intentionally not accepted here either — it's set once at creation (or by
         // the PDF importer) and locked from then on. It's the key future invoices are matched
         // against, so letting it drift after the fact would silently break that reconciliation.

@@ -115,8 +115,9 @@ namespace PinoyPantry.API.Controllers
             if (products == null || products.Count == 0)
                 return BadRequest(new { message = "No products provided." });
 
-            var imported = await _productService.ImportProductsAsync(products);
-            return Ok(new { message = $"Imported {imported} product(s) successfully." });
+            var (imported, skipped) = await _productService.ImportProductsAsync(products);
+            var skippedNote = skipped > 0 ? $" Skipped {skipped} already-existing product(s)." : "";
+            return Ok(new { message = $"Imported {imported} product(s) successfully.{skippedNote}" });
         }
 
         // POST: api/products/import/preview — Admin only. Parses a raw supplier .csv/.xlsx
@@ -124,7 +125,7 @@ namespace PinoyPantry.API.Controllers
         // nothing is written to the database here.
         [Authorize(Roles = "Admin")]
         [HttpPost("import/preview")]
-        public ActionResult<List<ImportPreviewRowDto>> PreviewImport(IFormFile file)
+        public async Task<ActionResult<List<ImportPreviewRowDto>>> PreviewImport(IFormFile file)
         {
             if (file == null || file.Length == 0)
                 return BadRequest(new { message = "No file uploaded." });
@@ -133,7 +134,7 @@ namespace PinoyPantry.API.Controllers
             try
             {
                 using var stream = file.OpenReadStream();
-                rows = ProductImportParseService.Parse(stream, file.FileName);
+                rows = await _productService.PreviewImportAsync(stream, file.FileName);
             }
             catch (InvalidOperationException ex)
             {

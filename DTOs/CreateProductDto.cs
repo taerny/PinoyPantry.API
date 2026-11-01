@@ -20,6 +20,8 @@ namespace PinoyPantry.API.DTOs
         // to this same product. Leave blank and one auto-generates (see ProductService).
         public string? Code { get; set; }
 
+        public string ShortDescription { get; set; } = string.Empty;
+
         // CostPrice/PackQty/Subtotal are intentionally not accepted here — cost now lives per
         // batch (ProductBatch.CostPrice/Subtotal), never written directly on the product, so a
         // product edit can never silently overwrite the batch-synced cost. See

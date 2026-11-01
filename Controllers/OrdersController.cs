@@ -45,7 +45,7 @@ public class OrdersController : ControllerBase
 
         try
         {
-            var order = await _orderService.CreateOrderAsync(dto);
+            var order = await _orderService.CreateOrderAsync(dto, HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
             return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
         catch (InvalidOperationException ex)

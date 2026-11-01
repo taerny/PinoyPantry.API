@@ -130,21 +130,65 @@ namespace PinoyPantry.API.Services
             };
         }
 
-        public async Task<int> ImportProductsAsync(IEnumerable<ImportProductDto> products)
-        {
-            var dtoList = products.ToList();
-            var entities = _mapper.Map<List<Product>>(dtoList); // StockQuantity ignored — starts at 0
-            var imported = await _productRepository.ImportProductsAsync(entities);
+        // Same normalisation as ProductRepository.GetExistingNamesAsync — case/whitespace-insensitive.
+        private static string NormalizeName(string name) =>
+            System.Text.RegularExpressions.Regex.Replace(name.Trim(), @"\s+", " ").ToLowerInvariant();
 
-            // Each imported row's quantity becomes that product's initial batch, same as how
-            // existing live products were backfilled with "Batch 1" when tracking began.
-            for (var i = 0; i < entities.Count; i++)
+        public async Task<List<ImportPreviewRowDto>> PreviewImportAsync(Stream fileStream, string fileName)
+        {
+            var rows = ProductImportParseService.Parse(fileStream, fileName);
+            var existing = await _productRepository.GetExistingNamesAsync();
+
+            foreach (var row in rows)
             {
-                if (dtoList[i].StockQuantity > 0)
-                    await _productRepository.CreateInitialBatchAsync(entities[i].Id, dtoList[i].StockQuantity);
+                var name = row.Columns.FirstOrDefault(c => c.Role == "name")?.Value ?? "";
+                row.AlreadyExists = existing.Contains(NormalizeName(name));
             }
 
-            return imported;
+            return rows;
+        }
+
+        public async Task<(int Imported, int Skipped)> ImportProductsAsync(IEnumerable<ImportProductDto> products)
+        {
+            // Skip anything that already exists (by name) or repeats earlier in this same batch —
+            // enforced here regardless of what the client sent, so a re-import can never double up.
+            var seen = await _productRepository.GetExistingNamesAsync();
+            var dtoList = new List<ImportProductDto>();
+            var skipped = 0;
+            foreach (var dto in products)
+            {
+                if (string.IsNullOrWhiteSpace(dto.Name) || !seen.Add(NormalizeName(dto.Name)))
+                {
+                    skipped++;
+                    continue;
+                }
+                dtoList.Add(dto);
+            }
+
+            if (dtoList.Count == 0) return (0, skipped);
+
+            var entities = _mapper.Map<List<Product>>(dtoList); // StockQuantity ignored — starts at 0
+            foreach (var entity in entities)
+            {
+                entity.Name = entity.Name.Trim();
+                // Always recomputed from cost + margin, never trusted from the client.
+                entity.RecommendedRetail = PricingCalculator.RecommendedPrice(entity.CostPrice, entity.Margin);
+            }
+            var imported = await _productRepository.ImportProductsAsync(entities);
+
+            for (var i = 0; i < entities.Count; i++)
+            {
+                // Same internal code every hand-added product gets, so the field is never blank.
+                if (string.IsNullOrWhiteSpace(entities[i].Code))
+                    await _productRepository.SetCodeAsync(entities[i].Id, $"PP-{entities[i].Id:D6}");
+
+                // Each imported row's quantity becomes that product's initial batch — carrying the
+                // cost, so the FIFO cost sync never resets the product's cost/price to 0 on first sale.
+                if (dtoList[i].StockQuantity > 0)
+                    await _productRepository.CreateInitialBatchAsync(entities[i].Id, dtoList[i].StockQuantity, entities[i].CostPrice);
+            }
+
+            return (imported, skipped);
         }
 
         public async Task<List<ImportPdfPreviewRowDto>> PreviewPdfImportAsync(Stream pdfStream)
