@@ -638,6 +638,9 @@ namespace PinoyPantry.API.Migrations
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal?>("RecommendedRetail")
                         .HasColumnType("decimal(18,2)");
 

@@ -49,7 +49,7 @@ namespace PinoyPantry.API.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ProductResponseDto>> GetProduct(int id)
         {
-            var product = await _productService.GetProductByIdAsync(id);
+            var product = await _productService.GetPublishedProductByIdAsync(id);
             if (product == null)
                 return NotFound(new { message = $"Product {id} not found." });
 

@@ -9,6 +9,9 @@ namespace PinoyPantry.API.Repositories
     {
         private readonly ApplicationDBContext _context;
 
+        // A product counts as "new" for this many days after it is first published.
+        public const int NewDays = 14;
+
         public ProductRepository(ApplicationDBContext context)
         {
             _context = context;
@@ -32,10 +35,19 @@ namespace PinoyPantry.API.Repositories
             if (!string.IsNullOrWhiteSpace(query.Search))
                 products = products.Where(p => p.Name.Contains(query.Search) || p.Description.Contains(query.Search));
 
+            if (query.NewOnly)
+            {
+                var since = DateTime.UtcNow.AddDays(-NewDays);
+                products = products.Where(p => p.PublishedAt != null && p.PublishedAt >= since && p.StockQuantity > 0);
+            }
+
             var totalCount = await products.CountAsync();
 
-            var paged = await products
-                .OrderBy(p => p.Id)
+            var ordered = string.Equals(query.Sort, "newest", StringComparison.OrdinalIgnoreCase)
+                ? products.OrderByDescending(p => p.PublishedAt).ThenByDescending(p => p.Id)
+                : products.OrderBy(p => p.Id);
+
+            var paged = await ordered
                 .Skip((query.Page - 1) * query.Limit)
                 .Take(query.Limit)
                 .ToListAsync();

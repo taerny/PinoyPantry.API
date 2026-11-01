@@ -21,6 +21,10 @@ namespace PinoyPantry.API.Models
 
         public bool IsPublished { get; set; } = false;
 
+        // When the product was first published (null if never). Drives the storefront "New Arrivals"
+        // - CreatedAt is the import date, which can be long before the admin actually puts it live.
+        public DateTime? PublishedAt { get; set; }
+
         // RecommendedRetail is derived — always recomputed from CostPrice/Margin/GST (see
         // PricingCalculator) whenever either input changes. Never set directly by an admin.
         [Column(TypeName = "decimal(18,2)")]

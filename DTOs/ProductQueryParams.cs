@@ -7,5 +7,11 @@ namespace PinoyPantry.API.DTOs
         public string? Category { get; set; }
         public string? Search { get; set; }
         public bool IncludeUnpublished { get; set; } = false;
+
+        // "newest" = most recently published first.
+        public string? Sort { get; set; }
+
+        // Only products first published within the last NewDays days and currently in stock.
+        public bool NewOnly { get; set; } = false;
     }
 }

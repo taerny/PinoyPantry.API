@@ -6,6 +6,7 @@ namespace PinoyPantry.API.Services
     {
         Task<PagedResult<ProductResponseDto>> GetAllProductsAsync(ProductQueryParams query);
         Task<ProductResponseDto?> GetProductByIdAsync(int id);
+        Task<ProductResponseDto?> GetPublishedProductByIdAsync(int id);
         Task<ProductResponseDto> CreateProductAsync(CreateProductDto productDto);
         Task<ProductResponseDto?> UpdateProductAsync(int id, UpdateProductDto productDto);
         Task<bool> DeleteProductAsync(int id);

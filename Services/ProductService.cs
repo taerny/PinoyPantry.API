@@ -76,6 +76,11 @@ namespace PinoyPantry.API.Services
                 throw new InvalidOperationException("Price must be greater than $0 once the product has stock.");
 
             _mapper.Map(productDto, existing);
+
+            // First time going live: remember when, so the storefront can flag it as a New Arrival.
+            if (existing.IsPublished && existing.PublishedAt == null)
+                existing.PublishedAt = DateTime.UtcNow;
+
             ApplyPricingCalculations(existing);
             var updated = await _productRepository.UpdateProductAsync(id, existing);
 
@@ -94,6 +99,13 @@ namespace PinoyPantry.API.Services
         public async Task<bool> DeleteProductAsync(int id)
         {
             return await _productRepository.DeleteProductAsync(id);
+        }
+
+        // Public single-product lookup: drafts are never exposed, even by guessing the id.
+        public async Task<ProductResponseDto?> GetPublishedProductByIdAsync(int id)
+        {
+            var product = await _productRepository.GetProductByIdAsync(id);
+            return product == null || !product.IsPublished ? null : _mapper.Map<ProductResponseDto>(product);
         }
 
         public async Task<ProductResponseDto?> GetByIdAsync(int id)
@@ -171,6 +183,7 @@ namespace PinoyPantry.API.Services
             foreach (var entity in entities)
             {
                 entity.Name = entity.Name.Trim();
+                if (entity.IsPublished) entity.PublishedAt = DateTime.UtcNow;
                 // Always recomputed from cost + margin, never trusted from the client.
                 entity.RecommendedRetail = PricingCalculator.RecommendedPrice(entity.CostPrice, entity.Margin);
             }
